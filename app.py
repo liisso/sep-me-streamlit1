@@ -9,10 +9,47 @@ def load_txt_from_url(url):
     return response.text.splitlines()
 
 def parse_grade_txt(lines):
+    if len(lines) < 6:
+        raise ValueError("파일 형식 오류: 6행 이상 필요")
     return lines[0].strip(), int(lines[1].strip()), "\n".join(lines[5:]).strip()
 
 def parse_score_txt(lines):
+    if len(lines) < 6:
+        raise ValueError("파일 형식 오류: 6행 이상 필요")
     return (lines[0].strip(), int(lines[2].strip()), int(lines[3].strip()), int(lines[4].strip()), "\n".join(lines[5:]).strip())
+
+# GitHub API로 파일 목록 가져오기
+def fetch_github_file_list(repo_owner, repo_name, branch, folder_path):
+    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents/{folder_path}?ref={branch}"
+    response = requests.get(api_url)
+    if response.status_code != 200:
+        st.error(f"GitHub API 호출 실패: {response.status_code}")
+        return []
+    file_list = response.json()
+    txt_files = [f["name"] for f in file_list if f["name"].endswith(".txt")]
+    return txt_files
+
+def get_grade_file_urls():
+    owner = "liisso"
+    repo = "sep-me-streamlit1"
+    branch = "main"
+    folder = "data/grade"
+    base_raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{folder}/"
+
+    txt_files = fetch_github_file_list(owner, repo, branch, folder)
+    urls = [base_raw_url + filename for filename in txt_files]
+    return urls
+
+def get_score_file_urls():
+    owner = "liisso"
+    repo = "sep-me-streamlit1"
+    branch = "main"
+    folder = "data/scre"  # 오타 감안해서 scre로 맞춤
+    base_raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{folder}/"
+
+    txt_files = fetch_github_file_list(owner, repo, branch, folder)
+    urls = [base_raw_url + filename for filename in txt_files]
+    return urls
 
 # --- 앱 실행 흐름 관리 ---
 def main():
@@ -36,7 +73,7 @@ def main():
     }
     steps[st.session_state.step]()
 
-# --- 화면 0: 이름 입력 ---
+# --- 화면 0: 이름 입력 및 개인정보 동의 ---
 def show_start_screen():
     st.title("📘 학생 글 채점 연습 프로그램 SEP ME 6")
     st.session_state.user_name = st.text_input("이름을 입력하세요")
@@ -99,8 +136,10 @@ def show_metacognition_checklist():
 def run_grade_practice():
     st.subheader("✏️ [연습1] 글의 등급 추정하기")
     if 'grade_urls' not in st.session_state:
-        base = "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/grade/*.txt"
-        urls = [f"{base}{i}.txt" for i in range(1, 16)]
+        urls = get_grade_file_urls()
+        if not urls:
+            st.error("grade 폴더 내 파일을 불러올 수 없습니다.")
+            return
         random.shuffle(urls)
         st.session_state.grade_urls = urls[:st.session_state.num_questions]
         st.session_state.grade_index = 0
@@ -112,12 +151,17 @@ def run_grade_practice():
         return
 
     lines = load_txt_from_url(st.session_state.grade_urls[idx])
-    q_num, answer, text = parse_grade_txt(lines)
+    try:
+        q_num, answer, text = parse_grade_txt(lines)
+    except Exception as e:
+        st.error(f"파일 파싱 중 오류 발생: {e}")
+        return
+
     st.markdown(f"<div style='color:black; font-size:18px; white-space:pre-wrap'>{text}</div>", unsafe_allow_html=True)
-    user = st.radio("예상 등급을 선택하세요:", ["1", "2", "3", "4", "5"], key=f"grade_{idx}")
+    user_choice = st.radio("예상 등급을 선택하세요:", ["1", "2", "3", "4", "5"], key=f"grade_{idx}")
 
     if st.button("제출", key=f"grade_submit_{idx}"):
-        if int(user) == answer:
+        if int(user_choice) == answer:
             st.success("정답입니다!")
             st.session_state.grade_results.append(f"{q_num}번 문항: 정답")
         else:
@@ -133,8 +177,10 @@ def run_grade_practice():
 def run_score_practice():
     st.subheader("✏️ [연습2] 글의 점수 추정하기")
     if 'score_urls' not in st.session_state:
-        base = "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/scre/*.txt"
-        urls = [f"{base}{i}.txt" for i in range(1, 16)]
+        urls = get_score_file_urls()
+        if not urls:
+            st.error("scre 폴더 내 파일을 불러올 수 없습니다.")
+            return
         random.shuffle(urls)
         st.session_state.score_urls = urls[:st.session_state.num_questions]
         st.session_state.score_index = 0
@@ -146,7 +192,12 @@ def run_score_practice():
         return
 
     lines = load_txt_from_url(st.session_state.score_urls[idx])
-    q_num, c, o, e, text = parse_score_txt(lines)
+    try:
+        q_num, c, o, e, text = parse_score_txt(lines)
+    except Exception as e:
+        st.error(f"파일 파싱 중 오류 발생: {e}")
+        return
+
     st.markdown(f"<div style='color:black; font-size:18px; white-space:pre-wrap'>{text}</div>", unsafe_allow_html=True)
 
     uc = st.number_input("내용 점수 (3~18)", 3, 18, key=f"uc_{idx}")
