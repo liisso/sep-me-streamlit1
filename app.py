@@ -159,7 +159,7 @@ elif st.session_state.page == "practice":
             if st.session_state.submitted and st.button("다음 문제로 이동", key="next_grade"):
     st.session_state.current_text_grade = None
     st.session_state.submitted = False
-    st.session_state.next_trigger = True    st.session_state.next_trigger = True
+    st.session_state.next_trigger = True    st.session_state.next_trigger = True    st.session_state.next_trigger = True
 
     elif mode == "점수 추정 연습":
         st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
@@ -230,4 +230,4 @@ elif st.session_state.page == "practice":
             if st.session_state.submitted and st.button("다음 문제로 이동", key="next_score"):
     st.session_state.current_text_score = None
     st.session_state.submitted = False
-    st.session_state.next_trigger = True    st.session_state.next_trigger = True
+    st.session_state.next_trigger = True    st.session_state.next_trigger = True    st.session_state.next_trigger = True
