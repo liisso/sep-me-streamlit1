@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import os
 import glob
 from datetime import datetime
@@ -42,7 +41,7 @@ def load_student_texts():
                 content_score = int(lines[2].strip())
                 organization_score = int(lines[3].strip())
                 expression_score = int(lines[4].strip())
-                student_text = '\n'.join(lines[5:]).strip()
+                student_text = ''.join(lines[5:]).strip()
                 if student_text:
                     samples.append({
                         'id': file_id,
@@ -78,7 +77,7 @@ def load_student_texts():
                 content_score = int(lines[2].strip())
                 organization_score = int(lines[3].strip())
                 expression_score = int(lines[4].strip())
-                student_text = '\n'.join(lines[5:]).strip()
+                student_text = ''.join(lines[5:]).strip()
                 if student_text:
                     samples.append({
                         'id': file_id,
@@ -93,7 +92,6 @@ def load_student_texts():
         except Exception:
             continue
     if samples:
-        # 문제 번호 순 정렬
         samples = sorted(samples, key=lambda x: (x['type'], x['file_id']))
         return samples
     else:
