@@ -180,13 +180,17 @@ def run_grade_practice():
     if not st.session_state.submitted:
         if st.button("제출", key=f"grade_submit_{idx}"):
             st.session_state.submitted = True
-            if int(user_choice) == answer:
-                st.success("정답입니다!")
-                st.session_state.grade_results.append(f"{q_num}번 문항: 정답")
-            else:
-                st.error("오답입니다. 아래 피드백을 참고하세요.")
-                st.image(f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_grade/{q_num}.png")
-                st.session_state.grade_results.append(f"{q_num}번 문항: 오답")
+            try:
+                if int(user_choice) == answer:
+                    st.success("정답입니다!")
+                    st.session_state.grade_results.append(f"{q_num}번 문항: 정답")
+                else:
+                    st.error("오답입니다. 아래 피드백을 참고하세요.")
+                    st.image(f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_grade/{q_num}.png")
+                    st.session_state.grade_results.append(f"{q_num}번 문항: 오답")
+            except Exception as e:
+                st.error(f"채점 중 오류가 발생했습니다: {e}")
+                st.session_state.submitted = False
     else:
         if st.button("다음", key=f"grade_next_{idx}"):
             st.session_state.grade_index += 1
@@ -243,22 +247,25 @@ def run_score_practice():
     if not st.session_state.score_submitted:
         if st.button("제출", key=f"score_submit_{idx}"):
             st.session_state.score_submitted = True
+            try:
+                is_c = abs(uc - c) <= 1
+                is_o = abs(uo - o) <= 1
+                is_e = abs(ue - e) <= 1
 
-            is_c = abs(uc - c) <= 1
-            is_o = abs(uo - o) <= 1
-            is_e = abs(ue - e) <= 1
+                st.write(f"- 내용: {'정답' if is_c else '오답'}")
+                st.write(f"- 조직: {'정답' if is_o else '오답'}")
+                st.write(f"- 표현: {'정답' if is_e else '오답'}")
 
-            st.write(f"- 내용: {'정답' if is_c else '오답'}")
-            st.write(f"- 조직: {'정답' if is_o else '오답'}")
-            st.write(f"- 표현: {'정답' if is_e else '오답'}")
-
-            if is_c and is_o and is_e:
-                st.success("모든 요소 정답입니다!")
-                st.session_state.score_results.append(f"{q_num}번 문항: 정답")
-            else:
-                st.error("오답 항목이 있습니다.")
-                st.image(f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_score/{q_num}.png")
-                st.session_state.score_results.append(f"{q_num}번 문항: 오답")
+                if is_c and is_o and is_e:
+                    st.success("모든 요소 정답입니다!")
+                    st.session_state.score_results.append(f"{q_num}번 문항: 정답")
+                else:
+                    st.error("오답 항목이 있습니다.")
+                    st.image(f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_score/{q_num}.png")
+                    st.session_state.score_results.append(f"{q_num}번 문항: 오답")
+            except Exception as ex:
+                st.error(f"채점 중 오류가 발생했습니다: {ex}")
+                st.session_state.score_submitted = False
     else:
         if st.button("다음", key=f"score_next_{idx}"):
             st.session_state.score_index += 1
