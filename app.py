@@ -122,11 +122,11 @@ elif st.session_state.page == "practice":
 
     elif mode == "점수 추정 연습":
         st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
-        texts = [txt for txt in load_texts_from_github("scre") if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
+        texts = [txt for txt in load_texts_from_github("scre") if len(txt) >= 5 and txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
         existing_ids = sorted(int(txt[0].strip()) for txt in texts)
         st.sidebar.write(f"📂 불러온 문항 번호: {existing_ids}")
         if not st.session_state.current_text_score:
-            st.session_state.current_text_score = next((txt for txt in sorted(texts, key=lambda x: int(x[0].strip())) if int(x[0].strip()) == 1), None)
+            st.session_state.current_text_score = next((txt for txt in sorted(texts, key=lambda x: int(x[0].strip())) if int(txt[0].strip()) == 1), None)
         sel = st.session_state.current_text_score
         text_id, a_c, a_o, a_e = sel[0], int(sel[2]), int(sel[3]), int(sel[4])
         student_text = "\n".join(sel[5:])
