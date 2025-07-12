@@ -3,7 +3,6 @@ import streamlit as st
 import requests
 import random
 
-# --- 유틸 함수들 ---
 def load_txt_from_url(url):
     response = requests.get(url)
     return response.text.splitlines()
@@ -18,7 +17,6 @@ def parse_score_txt(lines):
         raise ValueError("파일 형식 오류: 6행 이상 필요")
     return (lines[0].strip(), int(lines[2].strip()), int(lines[3].strip()), int(lines[4].strip()), "\n".join(lines[5:]).strip())
 
-# GitHub API로 파일 목록 가져오기
 def fetch_github_file_list(repo_owner, repo_name, branch, folder_path):
     api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents/{folder_path}?ref={branch}"
     response = requests.get(api_url)
@@ -35,23 +33,18 @@ def get_grade_file_urls():
     branch = "main"
     folder = "data/grade"
     base_raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{folder}/"
-
     txt_files = fetch_github_file_list(owner, repo, branch, folder)
-    urls = [base_raw_url + filename for filename in txt_files]
-    return urls
+    return [base_raw_url + filename for filename in txt_files]
 
 def get_score_file_urls():
     owner = "liisso"
     repo = "sep-me-streamlit1"
     branch = "main"
-    folder = "data/scre"  # 오타 감안해서 scre로 맞춤
+    folder = "data/scre"
     base_raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{folder}/"
-
     txt_files = fetch_github_file_list(owner, repo, branch, folder)
-    urls = [base_raw_url + filename for filename in txt_files]
-    return urls
+    return [base_raw_url + filename for filename in txt_files]
 
-# --- 앱 실행 흐름 관리 ---
 def main():
     st.set_page_config(page_title="SEP ME 6", layout="wide")
 
@@ -60,7 +53,7 @@ def main():
         st.session_state.user_name = ""
         st.session_state.agreed = False
         st.session_state.mode = None
-        st.session_state.num_questions = 15  # 문항 수 15개 고정
+        st.session_state.num_questions = 15
 
     steps = {
         0: show_start_screen,
@@ -70,11 +63,10 @@ def main():
         4: run_grade_practice,
         5: run_score_practice,
         6: show_summary_result,
-        7: show_mode_complete  # 새 단계 추가
     }
+
     steps[st.session_state.step]()
 
-# --- 화면 0 ---
 def show_start_screen():
     st.title("📘 학생 글 채점 연습 프로그램 SEP ME 6")
     st.session_state.user_name = st.text_input("이름을 입력하세요")
@@ -86,11 +78,9 @@ def show_start_screen():
         elif not st.session_state.agreed:
             st.warning("개인정보 동의가 필요합니다.")
         else:
-            # 문항 수 15개 고정
             st.session_state.num_questions = 15
             st.session_state.step = 1
 
-# --- 화면 1 ---
 def show_intro():
     st.subheader("쓰기 과제 및 평가 기준 안내")
     with st.expander("📝 쓰기 과제 보기"):
@@ -102,7 +92,6 @@ def show_intro():
     if st.button("연습 유형 선택으로 이동"):
         st.session_state.step = 2
 
-# --- 화면 2 ---
 def show_mode_selection():
     st.subheader("연습 유형을 선택하세요")
     mode = st.radio("실시할 연습 모드 선택", ["등급 추정만 하기", "점수 추정만 하기", "두 연습 모두 하기"])
@@ -117,7 +106,6 @@ def show_mode_selection():
             st.session_state.mode = "both"
             st.session_state.step = 3
 
-# --- 화면 3 ---
 def show_metacognition_checklist():
     st.subheader("상위 인지 점검 항목")
     items = [
@@ -134,7 +122,6 @@ def show_metacognition_checklist():
         if st.button("등급 추정 연습 시작"):
             st.session_state.step = 4
 
-# --- 화면 4: 등급 추정 연습 ---
 def run_grade_practice():
     st.subheader("✏️ [연습1] 글의 등급 추정하기")
 
@@ -152,8 +139,10 @@ def run_grade_practice():
     idx = st.session_state.grade_index
     total = st.session_state.num_questions
     if idx >= total:
-        st.session_state.completed_mode = "grade"
-        st.session_state.step = 7
+        if st.session_state.mode == "both":
+            st.session_state.step = 5
+        else:
+            st.session_state.step = 6
         return
 
     lines = load_txt_from_url(st.session_state.grade_urls[idx])
@@ -203,7 +192,6 @@ def run_grade_practice():
             st.session_state.submitted = False
             return
 
-# --- 화면 5: 점수 추정 연습 ---
 def run_score_practice():
     st.subheader("✏️ [연습2] 글의 점수 추정하기")
 
@@ -221,8 +209,7 @@ def run_score_practice():
     idx = st.session_state.score_index
     total = st.session_state.num_questions
     if idx >= total:
-        st.session_state.completed_mode = "score"
-        st.session_state.step = 7
+        st.session_state.step = 6
         return
 
     lines = load_txt_from_url(st.session_state.score_urls[idx])
@@ -284,19 +271,25 @@ def run_score_practice():
             st.session_state.score_submitted = False
             return
 
-# --- 화면 7: 연습 완료 후 모드 선택 화면 ---
-def show_mode_complete():
-    mode = st.session_state.get("completed_mode", "")
-    if mode == "grade":
-        st.success("등급 추정 연습이 모두 끝났습니다.")
-    elif mode == "score":
-        st.success("점수 추정 연습이 모두 끝났습니다.")
+def show_summary_result():
+    st.title("📊 연습 결과 요약")
+
+    if 'grade_results' in st.session_state and st.session_state.grade_results:
+        st.subheader("등급 추정 결과")
+        for r in st.session_state.grade_results:
+            st.markdown(f"- {r}")
     else:
-        st.success("연습이 모두 끝났습니다.")
+        st.info("등급 추정 연습 결과가 없습니다.")
+
+    if 'score_results' in st.session_state and st.session_state.score_results:
+        st.subheader("점수 추정 결과")
+        for r in st.session_state.score_results:
+            st.markdown(f"- {r}")
+    else:
+        st.info("점수 추정 연습 결과가 없습니다.")
 
     if st.button("다른 연습 모드 선택하러 가기"):
-        st.session_state.step = 2  # 연습 모드 선택 화면으로 이동
-        # 초기화
+        st.session_state.step = 2
         st.session_state.submitted = False
         st.session_state.score_submitted = False
         st.session_state.grade_index = 0
@@ -305,20 +298,6 @@ def show_mode_complete():
         st.session_state.score_urls = []
         st.session_state.grade_results = []
         st.session_state.score_results = []
-        st.session_state.completed_mode = ""
-
-# --- 화면 6: 결과 ---
-def show_summary_result():
-    st.title("📊 연습 결과 요약")
-    if 'grade_results' in st.session_state and st.session_state.grade_results:
-        st.subheader("등급 추정 결과")
-        for r in st.session_state.grade_results:
-            st.markdown(f"- {r}")
-    if 'score_results' in st.session_state and st.session_state.score_results:
-        st.subheader("점수 추정 결과")
-        for r in st.session_state.score_results:
-            st.markdown(f"- {r}")
-    st.success("연습을 완료했습니다! 수고하셨습니다.")
 
 if __name__ == "__main__":
     main()
