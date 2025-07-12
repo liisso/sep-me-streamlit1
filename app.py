@@ -253,4 +253,4 @@ def main():
         st.rerun()
     
     # 단계별 페이지 표시
-    if st.session_state
+    if st.session_state:
