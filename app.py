@@ -131,6 +131,7 @@ elif st.session_state.page == "practice":
                 if st.button("다음 문제로 이동", key="next_grade"):
                     st.session_state.current_text_grade = random.choice(texts)
                     st.session_state.submitted = False
+                    st.experimental_rerun()
 
     elif mode == "점수 추정 연습":
         st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
@@ -202,3 +203,4 @@ elif st.session_state.page == "practice":
                 if st.button("다음 문제로 이동", key="next_score"):
                     st.session_state.current_text_score = random.choice(texts)
                     st.session_state.submitted = False
+                    st.experimental_rerun()
