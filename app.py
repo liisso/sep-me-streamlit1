@@ -50,15 +50,17 @@ def render_student_text(text):
 # 세션 상태 초기화
 if "submitted" not in st.session_state:
     st.session_state.submitted = False
-if "current_text" not in st.session_state:
-    st.session_state.current_text = None
+if "current_text_grade" not in st.session_state:
+    st.session_state.current_text_grade = None
+if "current_text_score" not in st.session_state:
+    st.session_state.current_text_score = None
 
 # 과제 안내 이미지
 with st.expander("📑 쓰기 과제 및 평가 기준 보기"):
     imgs = {
         "쓰기 과제": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/assignment.png",
-        "평가 기준": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/standard.png",
-        "등급별 예시문": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/prompt.jpg"
+        "평가 기준": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/standard.png",
+        "등급별 예시문": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/prompt.jpg"
     }
     for label, url in imgs.items():
         img_data = load_image_from_url(url)
@@ -86,10 +88,10 @@ if mode == "등급 추정 연습":
     if not texts:
         st.error("❗ 텍스트를 불러올 수 없습니다.")
     else:
-        if not st.session_state.current_text:
-            st.session_state.current_text = random.choice(texts)
+        if not st.session_state.current_text_grade:
+            st.session_state.current_text_grade = random.choice(texts)
 
-        selected = st.session_state.current_text
+        selected = st.session_state.current_text_grade
         text_id = selected[0].strip()
         correct_grade = int(selected[1].strip())
         student_text = "\n".join(selected[5:])
@@ -115,7 +117,7 @@ if mode == "등급 추정 연습":
 
         if st.session_state.submitted:
             if st.button("다음 문제로 이동", key="next_grade"):
-                st.session_state.current_text = random.choice(texts)
+                st.session_state.current_text_grade = random.choice(texts)
                 st.session_state.submitted = False
 
 # 점수 추정 연습
@@ -126,10 +128,10 @@ else:
     if not texts:
         st.error("❗ 텍스트를 불러올 수 없습니다.")
     else:
-        if not st.session_state.current_text:
-            st.session_state.current_text = random.choice(texts)
+        if not st.session_state.current_text_score:
+            st.session_state.current_text_score = random.choice(texts)
 
-        selected = st.session_state.current_text
+        selected = st.session_state.current_text_score
         text_id = selected[0].strip()
         answer_c = int(selected[2].strip())
         answer_o = int(selected[3].strip())
@@ -187,5 +189,5 @@ else:
 
         if st.session_state.submitted:
             if st.button("다음 문제로 이동", key="next_score"):
-                st.session_state.current_text = random.choice(texts)
+                st.session_state.current_text_score = random.choice(texts)
                 st.session_state.submitted = False
