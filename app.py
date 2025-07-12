@@ -157,7 +157,24 @@ def run_grade_practice():
         st.error(f"파일 파싱 중 오류 발생: {e}")
         return
 
-    st.markdown(f"<div style='color:black; font-size:18px; white-space:pre-wrap'>{text}</div>", unsafe_allow_html=True)
+    # 학생 글 배경 하얀색, 검정 글씨로 가독성 강화
+    st.markdown(
+        f"""
+        <div style="
+            background-color: white; 
+            color: black; 
+            font-size: 18px; 
+            white-space: pre-wrap; 
+            padding: 15px; 
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            ">
+            {text}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     user_choice = st.radio("예상 등급을 선택하세요:", ["1", "2", "3", "4", "5"], key=f"grade_{idx}")
 
     if st.button("제출", key=f"grade_submit_{idx}"):
@@ -198,7 +215,23 @@ def run_score_practice():
         st.error(f"파일 파싱 중 오류 발생: {e}")
         return
 
-    st.markdown(f"<div style='color:black; font-size:18px; white-space:pre-wrap'>{text}</div>", unsafe_allow_html=True)
+    # 학생 글 배경 하얀색, 검정 글씨로 가독성 강화
+    st.markdown(
+        f"""
+        <div style="
+            background-color: white; 
+            color: black; 
+            font-size: 18px; 
+            white-space: pre-wrap; 
+            padding: 15px; 
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            ">
+            {text}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     uc = st.number_input("내용 점수 (3~18)", 3, 18, key=f"uc_{idx}")
     uo = st.number_input("조직 점수 (2~12)", 2, 12, key=f"uo_{idx}")
