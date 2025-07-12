@@ -5,7 +5,6 @@ from io import BytesIO
 from PIL import Image
 
 st.set_page_config(page_title="논설문 평가 연습", layout="wide")
-st.title("✍️ 논설문 평가 연습 프로그램 (SEP ME Web Edition)")
 
 # 이미지 불러오기 함수
 def load_image_from_url(url):
@@ -47,16 +46,22 @@ def render_student_text(text):
         unsafe_allow_html=True
     )
 
-# 세션 상태 초기화
-if "submitted" not in st.session_state:
-    st.session_state.submitted = False
-if "current_text_grade" not in st.session_state:
-    st.session_state.current_text_grade = None
-if "current_text_score" not in st.session_state:
-    st.session_state.current_text_score = None
+# 사용자 정보 입력 단계
+if "username" not in st.session_state:
+    st.session_state.page = "intro"
 
-# 과제 안내 이미지
-with st.expander("📑 쓰기 과제 및 평가 기준 보기"):
+if st.session_state.page == "intro":
+    st.title("✍️ 논설문 평가 연습 프로그램 (SEP ME Web Edition)")
+    st.header("1단계: 사용자 정보 입력")
+    name = st.text_input("이름을 입력하세요")
+    agree = st.checkbox("입력한 이름으로 연습 결과가 저장됨에 동의합니다")
+    if name and agree:
+        st.session_state.username = name
+        st.session_state.page = "instructions"
+        st.experimental_rerun()
+
+elif st.session_state.page == "instructions":
+    st.title("📌 연습 안내 및 과제 확인")
     imgs = {
         "쓰기 과제": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/assignment.png",
         "평가 기준": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/standard.png",
@@ -66,12 +71,13 @@ with st.expander("📑 쓰기 과제 및 평가 기준 보기"):
         img_data = load_image_from_url(url)
         if img_data:
             st.image(img_data, caption=label)
+    if st.button("다음으로", key="to_practice"):
+        st.session_state.page = "practice"
+        st.experimental_rerun()
 
-# 모드 선택
-mode = st.radio("연습 모드를 선택하세요", ["등급 추정 연습", "점수 추정 연습"])
-
-# 상위 인지 점검 체크리스트
-with st.expander("🧠 문제 풀이 전 상위 인지 점검 리스트"):
+elif st.session_state.page == "practice":
+    st.title(f"✍️ 논설문 평가 연습 - {st.session_state.username}님")
+    st.markdown("### 상위 인지 점검 리스트")
     st.markdown("""
     - ✅ 글의 **주제가 분명히** 드러났는가?
     - ✅ 자신의 **주장이 일관성 있게** 유지되었는가?
@@ -80,29 +86,36 @@ with st.expander("🧠 문제 풀이 전 상위 인지 점검 리스트"):
     - ✅ 문장 **표현이 명확하고 오류가 없는가?**
     """)
 
-# 등급 추정 연습
-if mode == "등급 추정 연습":
-    st.subheader("🎯 [연습1] 학생 글의 등급 추정하기")
-    texts = load_texts_from_github("grade")
-    texts = [txt for txt in texts if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
+    mode = st.radio("연습 모드를 선택하세요", ["등급 추정 연습", "점수 추정 연습"])
 
-    if not texts:
-        st.error("❗ 텍스트를 불러올 수 없습니다.")
-    else:
-        if not st.session_state.current_text_grade:
-            st.session_state.current_text_grade = random.choice(texts)
+    if "submitted" not in st.session_state:
+        st.session_state.submitted = False
+    if "current_text_grade" not in st.session_state:
+        st.session_state.current_text_grade = None
+    if "current_text_score" not in st.session_state:
+        st.session_state.current_text_score = None
 
-        selected = st.session_state.current_text_grade
-        text_id = selected[0].strip()
-        correct_grade = int(selected[1].strip())
-        student_text = "\n".join(selected[5:])
+    if mode == "등급 추정 연습":
+        st.subheader("🎯 [연습1] 학생 글의 등급 추정하기")
+        texts = load_texts_from_github("grade")
+        texts = [txt for txt in texts if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
 
-        st.markdown("#### 학생 글")
-        render_student_text(student_text)
+        if not texts:
+            st.error("❗ 텍스트를 불러올 수 없습니다.")
+        else:
+            if not st.session_state.current_text_grade:
+                st.session_state.current_text_grade = random.choice(texts)
 
-        user_grade = st.radio("예상 등급을 선택하세요", [1, 2, 3, 4, 5], horizontal=True)
+            selected = st.session_state.current_text_grade
+            text_id = selected[0].strip()
+            correct_grade = int(selected[1].strip())
+            student_text = "\n".join(selected[5:])
 
-        if not st.session_state.submitted:
+            st.markdown("#### 학생 글")
+            render_student_text(student_text)
+
+            user_grade = st.radio("예상 등급을 선택하세요", [1, 2, 3, 4, 5], horizontal=True)
+
             if st.button("제출", key="submit_grade"):
                 st.session_state.submitted = True
                 if user_grade == correct_grade:
@@ -116,42 +129,40 @@ if mode == "등급 추정 연습":
                     else:
                         st.warning(f"이미지를 불러올 수 없습니다: {img_url}")
 
-        if st.session_state.submitted:
-            if st.button("다음 문제로 이동", key="next_grade"):
-                st.session_state.current_text_grade = random.choice(texts)
-                st.session_state.submitted = False
+            if st.session_state.submitted:
+                if st.button("다음 문제로 이동", key="next_grade"):
+                    st.session_state.current_text_grade = random.choice(texts)
+                    st.session_state.submitted = False
 
-# 점수 추정 연습
-else:
-    st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
-    texts = load_texts_from_github("score")
-    texts = [txt for txt in texts if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
+    elif mode == "점수 추정 연습":
+        st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
+        texts = load_texts_from_github("score")
+        texts = [txt for txt in texts if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
 
-    if not texts:
-        st.error("❗ 텍스트를 불러올 수 없습니다.")
-    else:
-        if not st.session_state.current_text_score:
-            st.session_state.current_text_score = random.choice(texts)
+        if not texts:
+            st.error("❗ 텍스트를 불러올 수 없습니다.")
+        else:
+            if not st.session_state.current_text_score:
+                st.session_state.current_text_score = random.choice(texts)
 
-        selected = st.session_state.current_text_score
-        text_id = selected[0].strip()
-        answer_c = int(selected[2].strip())
-        answer_o = int(selected[3].strip())
-        answer_e = int(selected[4].strip())
-        student_text = "\n".join(selected[5:])
+            selected = st.session_state.current_text_score
+            text_id = selected[0].strip()
+            answer_c = int(selected[2].strip())
+            answer_o = int(selected[3].strip())
+            answer_e = int(selected[4].strip())
+            student_text = "\n".join(selected[5:])
 
-        st.markdown("#### 학생 글")
-        render_student_text(student_text)
+            st.markdown("#### 학생 글")
+            render_student_text(student_text)
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            user_c = st.number_input("내용 점수 (3~18)", min_value=3, max_value=18, step=1)
-        with col2:
-            user_o = st.number_input("조직 점수 (2~12)", min_value=2, max_value=12, step=1)
-        with col3:
-            user_e = st.number_input("표현 점수 (2~12)", min_value=2, max_value=12, step=1)
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                user_c = st.number_input("내용 점수 (3~18)", min_value=3, max_value=18, step=1)
+            with col2:
+                user_o = st.number_input("조직 점수 (2~12)", min_value=2, max_value=12, step=1)
+            with col3:
+                user_e = st.number_input("표현 점수 (2~12)", min_value=2, max_value=12, step=1)
 
-        if not st.session_state.submitted:
             if st.button("제출", key="submit_score"):
                 st.session_state.submitted = True
                 messages = []
@@ -189,7 +200,7 @@ else:
                     else:
                         st.warning(f"이미지를 불러올 수 없습니다: {img_url}")
 
-        if st.session_state.submitted:
-            if st.button("다음 문제로 이동", key="next_score"):
-                st.session_state.current_text_score = random.choice(texts)
-                st.session_state.submitted = False
+            if st.session_state.submitted:
+                if st.button("다음 문제로 이동", key="next_score"):
+                    st.session_state.current_text_score = random.choice(texts)
+                    st.session_state.submitted = False
