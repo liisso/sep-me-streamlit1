@@ -62,8 +62,6 @@ def format_time(seconds):
 
 grade_time = "-"
 score_time = "-"
-if st.session_state.get("grade_start_time"):
-    grade_time = format_time(time.time() - st.session_state.grade_start_time)
 if st.session_state.get("score_start_time"):
     score_time = format_time(time.time() - st.session_state.score_start_time)
 
@@ -112,10 +110,8 @@ if st.session_state.page == "intro":
     name = st.text_input("이름을 입력하세요")
     agree = st.checkbox("입력한 이름으로 연습 결과가 저장됨에 동의합니다")
     if name and agree and st.button("다음 단계로 진행"):
-    st.session_state.grade_start_time = time.time()
-    st.session_state.score_start_time = time.time()
-        st.session_state.username = name
-        st.session_state.page = "instructions"
+    st.session_state.username = name
+    st.session_state.page = "instructions"
 
 elif st.session_state.page == "instructions":
     st.title("📌 연습 안내 및 과제 확인")
