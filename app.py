@@ -826,8 +826,46 @@ def main():
     initialize_session_state()
 
        # 디렉토리 확인용 코드 삽입
-    import os
-    st.write("현재 작업 디렉터리:", os.getcwd())
+# main() 함수 시작 부분에 추가
+import os
+import glob
+
+st.write("📁 파일 구조 진단:")
+
+# 1. data 폴더 확인
+if os.path.exists("data"):
+    st.success("✅ data 폴더 존재")
+    data_contents = os.listdir("data")
+    st.write("data 폴더 내용:", data_contents)
+    
+    # 2. grade 폴더 확인
+    if os.path.exists("data/grade"):
+        grade_files = [f for f in os.listdir("data/grade") if f.endswith('.txt')]
+        st.success(f"✅ grade 폴더: {len(grade_files)}개 txt 파일")
+        st.write("grade 파일들:", grade_files[:5])
+        
+        # 첫 번째 파일 내용 확인
+        if grade_files:
+            with open(f"data/grade/{grade_files[0]}", 'r', encoding='utf-8') as f:
+                sample_content = f.read()
+            st.write(f"**{grade_files[0]} 내용 미리보기:**")
+            st.code(sample_content[:200])
+    else:
+        st.error("❌ data/grade 폴더 없음")
+    
+    # 3. score 폴더 확인
+    if os.path.exists("data/score"):
+        score_files = [f for f in os.listdir("data/score") if f.endswith('.txt')]
+        st.success(f"✅ score 폴더: {len(score_files)}개 txt 파일")
+    else:
+        st.error("❌ data/score 폴더 없음")
+        
+else:
+    st.error("❌ data 폴더 없음")
+    # 전체에서 txt 파일 찾기
+    all_txt = glob.glob("**/*.txt", recursive=True)
+    st.write("전체 txt 파일들:", all_txt[:10])
+
     
     # 사이드바
     st.sidebar.title("📊 진행 현황")
