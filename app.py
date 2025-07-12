@@ -192,7 +192,7 @@ def run_grade_practice():
         if st.button("다음", key=f"grade_next_{idx}"):
             st.session_state.grade_index += 1
             st.session_state.submitted = False
-            st.experimental_rerun()
+            return  # rerun 제거, return만
 
 def run_score_practice():
     st.subheader("✏️ [연습2] 글의 점수 추정하기")
@@ -272,7 +272,7 @@ def run_score_practice():
         if st.button("다음", key=f"score_next_{idx}"):
             st.session_state.score_index += 1
             st.session_state.score_submitted = False
-            st.experimental_rerun()
+            return  # rerun 제거, return만
 
 def show_summary_result():
     st.title("📊 연습 결과 요약")
