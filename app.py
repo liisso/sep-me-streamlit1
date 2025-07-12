@@ -112,6 +112,7 @@ def run_grade_practice():
         return
 
     lines = load_txt_from_url(st.session_state.grade_urls[idx])
+    st.write("### 파일 내용 확인용 lines 출력:", lines)  # 여기에 출력
     q_num, answer, text = parse_grade_txt(lines)
     st.markdown(f"<div style='color:black; font-size:18px; white-space:pre-wrap'>{text}</div>", unsafe_allow_html=True)
     user = st.radio("예상 등급을 선택하세요:", ["1", "2", "3", "4", "5"], key=f"grade_{idx}")
