@@ -106,7 +106,7 @@ if mode == "등급 추정 연습":
                     st.success("✅ 정답입니다!")
                 else:
                     st.error("❌ 오답입니다.")
-                    img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_grade/{text_id}.png"
+                    img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/data/f_grade/{text_id}.png"
                     img_data = load_image_from_url(img_url)
                     if img_data:
                         st.image(img_data, caption="등급 평가 해설")
@@ -178,7 +178,7 @@ else:
                     st.success("🎉 모든 점수를 정확히 맞추셨습니다!")
                 else:
                     st.error("📌 일부 점수가 오답입니다. 해설 이미지를 참고하세요.")
-                    img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_score/{text_id}.png"
+                    img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/data/f_score/{text_id}.png"
                     img_data = load_image_from_url(img_url)
                     if img_data:
                         st.image(img_data, caption="요소별 평가 해설")
