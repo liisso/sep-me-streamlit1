@@ -4,24 +4,17 @@ import glob
 from datetime import datetime
 import pandas as pd
 
-# ===================== 초기 세팅 =====================
-
 st.set_page_config(page_title="SEP ME ver.6", page_icon="📝", layout="wide")
 
-def initialize_session_state():
-    if 'stage' not in st.session_state:
-        st.session_state.stage = 'intro'
-        st.session_state.user_name = ''
-        st.session_state.selected_practice = None
-        st.session_state.current_idx = 0
-        st.session_state.practice1_results = []
-        st.session_state.practice2_results = []
-        st.session_state.start_time = datetime.now()
-        st.session_state.grade_samples = []
-        st.session_state.score_samples = []
+# ========== 경로 진단 ==========
+def show_path_diagnostics():
+    st.write("📁 현재 작업 디렉터리:", os.getcwd())
+    for folder in ["data", "data/grade", "data/score", "data/f_grade", "data/f_score"]:
+        st.write(f"폴더 {folder} 존재:", os.path.exists(folder))
+        if os.path.exists(folder):
+            st.write(f"{folder} 파일:", os.listdir(folder))
 
-# ===================== 데이터 로딩 =====================
-
+# ========== 데이터 로딩 ==========
 def load_student_texts(folder, type_):
     samples = []
     files = sorted([f for f in os.listdir(folder) if f.endswith('.txt')])
@@ -64,15 +57,23 @@ def load_all_data():
     score_samples = load_student_texts("data/score", "score")
     return grade_samples, score_samples
 
-# ===================== 피드백 이미지 경로 =====================
-
 def get_feedback_image_path(kind, question_num):
-    # kind: 'grade' or 'score'
     path = f"data/f_{kind}/{question_num}.png"
     return path if os.path.exists(path) else None
 
-# ===================== UI 함수 =====================
+def initialize_session_state():
+    if 'stage' not in st.session_state:
+        st.session_state.stage = 'intro'
+        st.session_state.user_name = ''
+        st.session_state.selected_practice = None
+        st.session_state.current_idx = 0
+        st.session_state.practice1_results = []
+        st.session_state.practice2_results = []
+        st.session_state.start_time = datetime.now()
+        st.session_state.grade_samples = []
+        st.session_state.score_samples = []
 
+# ========== UI 함수 ==========
 def show_intro_page():
     st.title("🎯 SEP ME ver.6")
     st.subheader("학생 글 채점 연습 프로그램")
@@ -246,6 +247,7 @@ def show_results():
 
 def main():
     initialize_session_state()
+    show_path_diagnostics()  # 경로 및 파일 구조 진단
     st.sidebar.title("📊 진행 현황")
     if st.session_state.user_name:
         st.sidebar.success(f"👋 {st.session_state.user_name}님")
