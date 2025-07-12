@@ -92,20 +92,20 @@ def load_student_texts():
                     })
         except Exception:
             continue
-    return samples
+    if samples:
+        samples = sorted(samples, key=lambda x: (x['type'], x['file_id']))
+        return samples
+    else:
+        return []
 
 def show_intro_page():
     st.title("🎯 SEP ME ver.6")
     st.subheader("학생 글 채점 연습 프로그램")
-    st.markdown("""
-    **SEP ME**는 학생 글 채점 능력 향상을 위한 AI 기반 학습 도구입니다.
-    실제 학생들이 작성한 글을 바탕으로 채점 연습을 할 수 있습니다.
-    """)
+    st.markdown("**SEP ME**는 학생 글 채점 능력 향상을 위한 AI 기반 학습 도구입니다.")
     with st.form("user_info"):
-        st.markdown("#### 📝 사용자 정보")
         name = st.text_input("이름을 입력해주세요:", placeholder="홍길동")
         agreement = st.checkbox("개인정보 수집 및 이용에 동의합니다 (학습 목적)")
-        if st.form_submit_button("🚀 학습 시작하기", type="primary"):
+        if st.form_submit_button("학습 시작하기", type="primary"):
             if name and agreement:
                 st.session_state.user_name = name
                 st.session_state.stage = 'assignment_info'
@@ -131,6 +131,12 @@ def show_assignment_info():
         '수준': ['매우 우수', '우수', '보통', '미흡', '매우 미흡']
     })
     st.table(grade_df)
+    st.subheader("📝 등급별 예시 학생글")
+    if os.path.exists("data/prompt.jpg"):
+        st.image("data/prompt.jpg", caption="등급별 예시 학생글")
+    st.subheader("📝 최종 피드백 예시")
+    if os.path.exists("data/finalfeed.jpg"):
+        st.image("data/finalfeed.jpg", caption="최종 피드백 예시")
     with st.form("checklist"):
         st.markdown("**상위 인지 요소 점검**")
         checklist_labels = [
@@ -156,6 +162,7 @@ def show_assignment_info():
 
 def show_practice_selection():
     st.title("🎯 연습 유형 선택")
+    st.markdown("원하는 연습을 선택하세요.")
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("#### 📚 연습1: 등급 추정")
@@ -178,9 +185,9 @@ def show_practice1():
     q = st.session_state.current_question
     if len(grade_data) >= q:
         current_data = grade_data[q-1]
-        st.markdown("### 📖 학생 글")
         st.markdown(
-            f"<div style='background:#f8f9fa;padding:1rem;border-radius:10px;white-space:pre-wrap;color:#222'>{current_data['text']}</div>",
+            f"<div style='background:#f8f9fa;padding:1.5rem;border-radius:10px;white-space:pre-wrap;color:black;font-size:1.1rem;'>"
+            f"<b>문제 {q}번</b><br><br>{current_data['text']}</div>",
             unsafe_allow_html=True
         )
         st.markdown("### 🎯 이 글의 등급을 선택하세요")
@@ -190,19 +197,24 @@ def show_practice1():
             with cols[i]:
                 if st.button(f"{grade}등급", key=f"grade_{grade}_{q}"):
                     selected_grade = grade
-        if selected_grade is not None:
+        if selected_grade:
             is_correct = selected_grade == current_data['correct_grade']
             st.write(f"정답: {current_data['correct_grade']}등급, 선택: {selected_grade}등급")
-            feedback_path = f"data/f_grade/{current_data['file_id']}.png"
-            if os.path.exists(feedback_path):
-                st.image(feedback_path, caption=f"문제 {current_data['file_id']}번 피드백")
+            feedback_paths = [
+                f"data/f_grade/{current_data['file_id']}.png"
+            ]
+            for path in feedback_paths:
+                if os.path.exists(path):
+                    st.image(path, caption="상세 피드백")
+                    break
             if q < len(grade_data):
                 if st.button("다음 문제 →"):
                     st.session_state.current_question += 1
                     st.rerun()
             else:
-                if st.button("결과 보기 →"):
-                    st.session_state.stage = 'results'
+                if st.button("연습2로 이동 →"):
+                    st.session_state.stage = 'practice2'
+                    st.session_state.current_question = 1
                     st.rerun()
     else:
         st.error("연습1 데이터가 부족합니다.")
@@ -213,9 +225,9 @@ def show_practice2():
     q = st.session_state.current_question
     if len(score_data) >= q:
         current_data = score_data[q-1]
-        st.markdown("### 📖 학생 글")
         st.markdown(
-            f"<div style='background:#f8f9fa;padding:1rem;border-radius:10px;white-space:pre-wrap;color:#222'>{current_data['text']}</div>",
+            f"<div style='background:#f8f9fa;padding:1.5rem;border-radius:10px;white-space:pre-wrap;color:black;font-size:1.1rem;'>"
+            f"<b>문제 {q}번</b><br><br>{current_data['text']}</div>",
             unsafe_allow_html=True
         )
         with st.form(f"score_form_{q}"):
@@ -223,13 +235,16 @@ def show_practice2():
             organization = st.number_input("조직 점수 (2-12)", min_value=2, max_value=12, value=7)
             expression = st.number_input("표현 점수 (2-12)", min_value=2, max_value=12, value=7)
             total = content + organization + expression
-            st.write(f"**총점: {total}점**")
             if st.form_submit_button("점수 제출하기"):
                 st.write(f"정답: 내용 {current_data['content_score']}, 조직 {current_data['organization_score']}, 표현 {current_data['expression_score']}")
                 st.write(f"총점: {total} / 정답 총점: {current_data['content_score'] + current_data['organization_score'] + current_data['expression_score']}")
-                feedback_path = f"data/f_score/{current_data['file_id']}.png"
-                if os.path.exists(feedback_path):
-                    st.image(feedback_path, caption=f"문제 {current_data['file_id']}번 피드백")
+                feedback_paths = [
+                    f"data/f_score/{current_data['file_id']}.png"
+                ]
+                for path in feedback_paths:
+                    if os.path.exists(path):
+                        st.image(path, caption="상세 피드백")
+                        break
                 if q < len(score_data):
                     if st.button("다음 문제 →"):
                         st.session_state.current_question += 1
@@ -245,24 +260,10 @@ def show_results():
     st.title("🎉 학습 완료!")
     st.balloons()
     st.success(f"{st.session_state.user_name}님, 연습을 완료하셨습니다!")
-    if st.button("처음으로"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+    st.button("처음으로", on_click=lambda: [st.session_state.clear(), st.rerun()])
 
 def main():
     initialize_session_state()
-    st.sidebar.title("📊 진행 현황")
-    if st.session_state.user_name:
-        st.sidebar.success(f"👋 {st.session_state.user_name}님")
-        if st.session_state.selected_practice:
-            st.sidebar.info(f"선택한 연습: {st.session_state.selected_practice}")
-        elapsed = datetime.now() - st.session_state.start_time
-        st.sidebar.metric("⏱️ 경과 시간", f"{elapsed.seconds // 60}분 {elapsed.seconds % 60}초")
-    if st.sidebar.button("🔄 처음부터 다시 시작"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
     if st.session_state.stage == 'intro':
         show_intro_page()
     elif st.session_state.stage == 'assignment_info':
