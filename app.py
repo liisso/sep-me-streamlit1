@@ -193,7 +193,7 @@ def show_practice1():
             with cols[i]:
                 if st.button(f"{grade}등급", key=f"grade_{grade}_{q}"):
                     selected_grade = grade
-        if selected_grade is not None:
+        if selected_grade:
             is_correct = selected_grade == current_data['correct_grade']
             st.write(f"정답: {current_data['correct_grade']}등급, 선택: {selected_grade}등급")
             if not is_correct:
