@@ -44,7 +44,7 @@ def get_score_file_urls():
     owner = "liisso"
     repo = "sep-me-streamlit1"
     branch = "main"
-    folder = "data/scre"
+    folder = "data/scre"  # 오타 감안해서 scre로 맞춤
     base_raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{folder}/"
 
     txt_files = fetch_github_file_list(owner, repo, branch, folder)
@@ -148,7 +148,8 @@ def run_grade_practice():
         st.session_state.submitted = False
 
     idx = st.session_state.grade_index
-    if idx >= st.session_state.num_questions:
+    total = st.session_state.num_questions
+    if idx >= total:
         st.session_state.step = 5 if st.session_state.mode == "both" else 6
         return
 
@@ -159,7 +160,7 @@ def run_grade_practice():
         st.error(f"파일 파싱 중 오류 발생: {e}")
         return
 
-    st.markdown(f"### 문항 번호: {q_num}")
+    st.markdown(f"### 문항 {idx+1} / {total}")
 
     st.markdown(
         f"""
@@ -197,7 +198,6 @@ def run_grade_practice():
         if st.button("다음", key=f"grade_next_{idx}"):
             st.session_state.grade_index += 1
             st.session_state.submitted = False
-            st.experimental_rerun()
             return
 
 # --- 화면 5: 점수 추정 연습 ---
@@ -216,7 +216,8 @@ def run_score_practice():
         st.session_state.score_submitted = False
 
     idx = st.session_state.score_index
-    if idx >= st.session_state.num_questions:
+    total = st.session_state.num_questions
+    if idx >= total:
         st.session_state.step = 6
         return
 
@@ -227,7 +228,7 @@ def run_score_practice():
         st.error(f"파일 파싱 중 오류 발생: {ex}")
         return
 
-    st.markdown(f"### 문항 번호: {q_num}")
+    st.markdown(f"### 문항 {idx+1} / {total}")
 
     st.markdown(
         f"""
@@ -277,7 +278,6 @@ def run_score_practice():
         if st.button("다음", key=f"score_next_{idx}"):
             st.session_state.score_index += 1
             st.session_state.score_submitted = False
-            st.experimental_rerun()
             return
 
 # --- 화면 6: 결과 ---
