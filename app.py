@@ -114,6 +114,8 @@ elif st.session_state.page == "practice":
             if next_text:
                 st.session_state.current_text_grade = next_text
                 st.session_state.submitted = False
+            else:
+                st.warning("✅ 모든 문항을 완료했습니다. 처음부터 다시 시작하려면 '이전 화면으로 이동'을 누르세요.")
 
     elif mode == "점수 추정 연습":
         st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
@@ -159,3 +161,5 @@ elif st.session_state.page == "practice":
             if next_text:
                 st.session_state.current_text_score = next_text
                 st.session_state.submitted = False
+            else:
+                st.warning("✅ 모든 문항을 완료했습니다. 처음부터 다시 시작하려면 '이전 화면으로 이동'을 누르세요.")
