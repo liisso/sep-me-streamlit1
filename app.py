@@ -53,6 +53,20 @@ if st.session_state.next_trigger:
 import pandas as pd
 import io
 
+from datetime import timedelta
+
+def format_time(seconds):
+    if isinstance(seconds, (int, float)):
+        return str(timedelta(seconds=int(seconds)))
+    return "-"
+
+grade_time = "-"
+score_time = "-"
+if st.session_state.get("grade_start_time"):
+    grade_time = format_time(time.time() - st.session_state.grade_start_time)
+if st.session_state.get("score_start_time"):
+    score_time = format_time(time.time() - st.session_state.score_start_time)
+
 if (
     (st.session_state.get("score_results") and st.session_state.get("current_text_score") and int(st.session_state.current_text_score[0]) == 15)
     or
@@ -63,18 +77,20 @@ if (
 
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-    summary_df = pd.DataFrame({
-        "사용자명": [st.session_state.username],
-        "등급 추정 소요 시간 (분:초)": [grade_time],
-        "점수 추정 소요 시간 (분:초)": [score_time]
-    })
-    summary_df.to_excel(writer, index=False, sheet_name="연습 시간 요약")
-    if not df_score.empty:
-        df_score["총점 (정답)"] = df_score[["내용 점수 (정답)", "조직 점수 (정답)", "표현 점수 (정답)"]].sum(axis=1)
-        df_score["총점 (입력)"] = df_score[["내용 점수 (입력)", "조직 점수 (입력)", "표현 점수 (입력)"]].sum(axis=1)
-        df_score.to_excel(writer, index=False, sheet_name="점수 추정 결과")
-    if not df_grade.empty:
-        df_grade.to_excel(writer, index=False, sheet_name="등급 추정 결과")
+        summary_df = pd.DataFrame({
+            "사용자명": [st.session_state.username],
+            "등급 추정 소요 시간 (분:초)": [grade_time],
+            "점수 추정 소요 시간 (분:초)": [score_time]
+        })
+        summary_df.to_excel(writer, index=False, sheet_name="연습 시간 요약")
+
+        if not df_score.empty:
+            df_score["총점 (정답)"] = df_score[["내용 점수 (정답)", "조직 점수 (정답)", "표현 점수 (정답)"]].sum(axis=1)
+            df_score["총점 (입력)"] = df_score[["내용 점수 (입력)", "조직 점수 (입력)", "표현 점수 (입력)"]].sum(axis=1)
+            df_score.to_excel(writer, index=False, sheet_name="점수 추정 결과")
+
+        if not df_grade.empty:
+            df_grade.to_excel(writer, index=False, sheet_name="등급 추정 결과")
 
     st.sidebar.download_button(
         label="📥 연습 결과 다운로드 (Excel)",
@@ -83,15 +99,7 @@ if (
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-# 결과 다운로드 기능
-if st.session_state.get("score_results"):
-    import pandas as pd
-    import io
-    df = pd.DataFrame(st.session_state.score_results)
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name="점수 추정 결과")
-        writer.save()
+
     st.sidebar.download_button(
         label="📥 점수 결과 다운로드 (Excel)",
         data=buffer.getvalue(),
@@ -104,8 +112,8 @@ if st.session_state.page == "intro":
     name = st.text_input("이름을 입력하세요")
     agree = st.checkbox("입력한 이름으로 연습 결과가 저장됨에 동의합니다")
     if name and agree and st.button("다음 단계로 진행"):
-    st.session_state.grade_start_time = None
-    st.session_state.score_start_time = None
+    st.session_state.grade_start_time = time.time()
+    st.session_state.score_start_time = time.time()
         st.session_state.username = name
         st.session_state.page = "instructions"
 
