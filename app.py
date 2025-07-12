@@ -19,6 +19,7 @@ with st.sidebar:
     st.write("현재 모드:", st.session_state.get("mode", "등급 추정 연습"))
     current_text = st.session_state.get("current_text_grade") if st.session_state.mode == "등급 추정 연습" else st.session_state.get("current_text_score")
     st.write("현재 문항 번호:", current_text[0] if current_text else "(없음)")
+    st.write("진행률:", f"{current_text[0]} / 15" if current_text else "(없음)")
     if st.button("◀ 이전 화면으로 이동"):
         st.session_state.page = "instructions"
         st.session_state.current_text_grade = None
@@ -97,12 +98,14 @@ elif st.session_state.page == "practice":
         user_grade = st.radio("예상 등급을 선택하세요", [1, 2, 3, 4, 5], horizontal=True)
 
         if st.button("제출", key="submit_grade"):
+        # 결과 저장 기능 (추후 확장 가능)
+        # st.session_state.result_log.append({...})
             st.session_state.submitted = True
             if user_grade == correct_grade:
                 st.success("✅ 정답입니다!")
             else:
                 st.error("❌ 오답입니다.")
-                url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/f_grade/{text_id}.png"
+                url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/f_grade/{text_id.strip()}.png"
                 if (img := load_image_from_url(url)):
                     st.image(img, caption="등급 평가 해설")
                 else:
@@ -137,6 +140,8 @@ elif st.session_state.page == "practice":
         with col3: user_e = st.number_input("표현 점수 (2~12)", min_value=2, max_value=12, step=1)
 
         if st.button("제출", key="submit_score"):
+        # 결과 저장 기능 (추후 확장 가능)
+        # st.session_state.result_log.append({...})
             st.session_state.submitted = True
             msgs = []
             for label, user, ans in [("내용", user_c, a_c), ("조직", user_o, a_o), ("표현", user_e, a_e)]:
@@ -149,7 +154,7 @@ elif st.session_state.page == "practice":
                 st.success("🎉 모든 점수를 정확히 맞추셨습니다!")
             else:
                 st.error("📌 일부 점수가 오답입니다. 해설 이미지를 참고하세요.")
-                url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/f_score/{text_id}.png"
+                url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/f_score/{text_id.strip()}.png"
                 if (img := load_image_from_url(url)):
                     st.image(img, caption="요소별 평가 해설")
                 else:
