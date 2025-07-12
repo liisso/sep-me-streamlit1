@@ -113,7 +113,7 @@ elif st.session_state.page == "practice":
 
         if st.session_state.submitted and st.button("다음 문제로 이동", key="next_grade"):
             current_id = int(st.session_state.current_text_grade[0])
-            next_text = next((txt for txt in sorted(texts, key=lambda x: int(x[0])) if int(txt[0]) == current_id + 1), None)
+            next_text = next((txt for txt in sorted(texts, key=lambda x: int(x[0].strip())) if int(txt[0].strip()) == current_id + 1), None)
             if next_text:
                 st.session_state.current_text_grade = next_text
                 st.session_state.submitted = False
@@ -162,7 +162,7 @@ elif st.session_state.page == "practice":
 
         if st.session_state.submitted and st.button("다음 문제로 이동", key="next_score"):
             current_id = int(st.session_state.current_text_score[0])
-            next_text = next((txt for txt in sorted(texts, key=lambda x: int(x[0])) if int(x[0]) == current_id + 1), None)
+            next_text = next((txt for txt in sorted(texts, key=lambda x: int(x[0].strip())) if int(x[0].strip()) == current_id + 1), None)
             if next_text:
                 st.session_state.current_text_score = next_text
                 st.session_state.submitted = False
