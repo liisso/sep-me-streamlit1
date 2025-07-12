@@ -22,135 +22,123 @@ def initialize_session_state():
         st.session_state.start_time = datetime.now()
 
 def load_student_texts():
-    """실제 txt 파일 구조에 맞게 데이터 로드"""
+    """동적으로 파일명을 감지하여 로드"""
     samples = []
     
-    st.info("📁 실제 학생 글 파일에서 데이터를 로딩합니다...")
+    st.info("📁 폴더에서 txt 파일들을 자동 감지합니다...")
     
-    # 연습1용 데이터 (grade 폴더)
-    grade_count = 0
-    grade_errors = []
-    
-    for i in range(1, 16):
-        try:
-            file_path = f"data/grade/{i}.txt"
+    # grade 폴더의 모든 txt 파일 찾기
+    try:
+        if os.path.exists("data/grade"):
+            grade_files = [f for f in os.listdir("data/grade") if f.endswith('.txt')]
+            grade_files.sort()  # 파일명 순으로 정렬
+            st.info(f"📚 grade 폴더에서 발견된 파일들: {grade_files}")
             
-            # UTF-8 먼저 시도
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()
-            except UnicodeDecodeError:
-                # UTF-8 실패 시 cp949 시도
-                with open(file_path, 'r', encoding='cp949') as f:
-                    lines = f.readlines()
-            
-            if len(lines) >= 6:  # 최소 6줄 이상이어야 함
-                # 정답 정보 추출 (첫 4줄)
-                correct_grade = int(lines[0].strip())
-                content_score = int(lines[1].strip())
-                organization_score = int(lines[2].strip())
-                expression_score = int(lines[3].strip())
-                # lines[4]는 추가 정보 (필요시 사용)
-                
-                # 실제 학생 글 내용 (5번째 줄부터)
-                student_text = ''.join(lines[5:]).strip()
-                
-                if student_text:  # 글 내용이 있는 경우만
-                    samples.append({
-                        'id': i,
-                        'text': student_text,
-                        'correct_grade': correct_grade,
-                        'content_score': content_score,
-                        'organization_score': organization_score,
-                        'expression_score': expression_score,
-                        'type': 'grade'
-                    })
-                    grade_count += 1
-                else:
-                    grade_errors.append(f"{i}.txt: 학생 글 내용이 없습니다.")
-            else:
-                grade_errors.append(f"{i}.txt: 파일 형식이 올바르지 않습니다. (줄 수: {len(lines)})")
+            # 연습1용 데이터 로드
+            grade_count = 0
+            for i, filename in enumerate(grade_files[:15], 1):  # 최대 15개
+                try:
+                    file_path = f"data/grade/{filename}"
                     
-        except FileNotFoundError:
-            grade_errors.append(f"{i}.txt: 파일을 찾을 수 없습니다.")
-        except ValueError as e:
-            grade_errors.append(f"{i}.txt: 점수 형식 오류 - {e}")
-        except Exception as e:
-            grade_errors.append(f"{i}.txt: 처리 오류 - {e}")
-    
-    # 연습2용 데이터 (score 폴더)
-    score_count = 0
-    score_errors = []
-    
-    for i in range(1, 16):
-        try:
-            file_path = f"data/score/{i}.txt"
-            
-            # UTF-8 먼저 시도
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()
-            except UnicodeDecodeError:
-                # UTF-8 실패 시 cp949 시도
-                with open(file_path, 'r', encoding='cp949') as f:
-                    lines = f.readlines()
-            
-            if len(lines) >= 6:
-                correct_grade = int(lines[0].strip())
-                content_score = int(lines[1].strip())
-                organization_score = int(lines[2].strip())
-                expression_score = int(lines[3].strip())
-                student_text = ''.join(lines[5:]).strip()
-                
-                if student_text:
-                    samples.append({
-                        'id': i + 15,
-                        'text': student_text,
-                        'correct_grade': correct_grade,
-                        'content_score': content_score,
-                        'organization_score': organization_score,
-                        'expression_score': expression_score,
-                        'type': 'score'
-                    })
-                    score_count += 1
-                else:
-                    score_errors.append(f"{i}.txt: 학생 글 내용이 없습니다.")
-            else:
-                score_errors.append(f"{i}.txt: 파일 형식이 올바르지 않습니다. (줄 수: {len(lines)})")
+                    # UTF-8 먼저 시도
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            lines = f.readlines()
+                    except UnicodeDecodeError:
+                        # UTF-8 실패 시 cp949 시도
+                        with open(file_path, 'r', encoding='cp949') as f:
+                            lines = f.readlines()
                     
-        except FileNotFoundError:
-            score_errors.append(f"{i}.txt: 파일을 찾을 수 없습니다.")
-        except ValueError as e:
-            score_errors.append(f"{i}.txt: 점수 형식 오류 - {e}")
-        except Exception as e:
-            score_errors.append(f"{i}.txt: 처리 오류 - {e}")
-    
-    # 로딩 결과 표시
-    if grade_count > 0 or score_count > 0:
-        st.success(f"✅ 실제 txt 파일 로딩 완료!")
-        st.info(f"📚 연습1: {grade_count}개 파일 로드됨")
-        st.info(f"📊 연습2: {score_count}개 파일 로드됨")
+                    if len(lines) >= 6:
+                        correct_grade = int(lines[0].strip())
+                        content_score = int(lines[1].strip())
+                        organization_score = int(lines[2].strip())
+                        expression_score = int(lines[3].strip())
+                        student_text = ''.join(lines[5:]).strip()
+                        
+                        if student_text:
+                            samples.append({
+                                'id': i,
+                                'text': student_text,
+                                'correct_grade': correct_grade,
+                                'content_score': content_score,
+                                'organization_score': organization_score,
+                                'expression_score': expression_score,
+                                'type': 'grade'
+                            })
+                            grade_count += 1
+                            st.success(f"✅ {filename} 로드 성공")
+                        else:
+                            st.warning(f"⚠️ {filename}: 학생 글 내용이 없습니다.")
+                    else:
+                        st.warning(f"⚠️ {filename}: 파일 형식이 올바르지 않습니다. (줄 수: {len(lines)})")
+                except Exception as e:
+                    st.warning(f"❌ {filename} 처리 오류: {e}")
+        else:
+            st.error("❌ data/grade 폴더를 찾을 수 없습니다.")
         
-        # 오류가 있다면 표시
-        if grade_errors:
-            with st.expander("⚠️ grade 폴더 파일 오류"):
-                for error in grade_errors:
-                    st.warning(error)
+        # score 폴더의 모든 txt 파일 찾기
+        if os.path.exists("data/score"):
+            score_files = [f for f in os.listdir("data/score") if f.endswith('.txt')]
+            score_files.sort()
+            st.info(f"📊 score 폴더에서 발견된 파일들: {score_files}")
+            
+            score_count = 0
+            for i, filename in enumerate(score_files[:15], 1):  # 최대 15개
+                try:
+                    file_path = f"data/score/{filename}"
+                    
+                    # UTF-8 먼저 시도
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            lines = f.readlines()
+                    except UnicodeDecodeError:
+                        # UTF-8 실패 시 cp949 시도
+                        with open(file_path, 'r', encoding='cp949') as f:
+                            lines = f.readlines()
+                    
+                    if len(lines) >= 6:
+                        correct_grade = int(lines[0].strip())
+                        content_score = int(lines[1].strip())
+                        organization_score = int(lines[2].strip())
+                        expression_score = int(lines[3].strip())
+                        student_text = ''.join(lines[5:]).strip()
+                        
+                        if student_text:
+                            samples.append({
+                                'id': i + 15,
+                                'text': student_text,
+                                'correct_grade': correct_grade,
+                                'content_score': content_score,
+                                'organization_score': organization_score,
+                                'expression_score': expression_score,
+                                'type': 'score'
+                            })
+                            score_count += 1
+                            st.success(f"✅ {filename} 로드 성공")
+                        else:
+                            st.warning(f"⚠️ {filename}: 학생 글 내용이 없습니다.")
+                    else:
+                        st.warning(f"⚠️ {filename}: 파일 형식이 올바르지 않습니다. (줄 수: {len(lines)})")
+                except Exception as e:
+                    st.warning(f"❌ {filename} 처리 오류: {e}")
+        else:
+            st.error("❌ data/score 폴더를 찾을 수 없습니다.")
         
-        if score_errors:
-            with st.expander("⚠️ score 폴더 파일 오류"):
-                for error in score_errors:
-                    st.warning(error)
-        
-        return samples
-    else:
-        st.error("❌ 사용 가능한 txt 파일이 없습니다.")
-        st.warning("🔄 샘플 데이터로 대체합니다.")
+        if grade_count > 0 or score_count > 0:
+            st.success(f"🎉 동적 파일 로딩 완료: 연습1({grade_count}개), 연습2({score_count}개)")
+            return samples
+        else:
+            st.error("❌ 유효한 txt 파일을 찾을 수 없습니다.")
+            return generate_fallback_data()
+            
+    except Exception as e:
+        st.error(f"❌ 폴더 접근 오류: {e}")
         return generate_fallback_data()
 
 def generate_fallback_data():
     """txt 파일 로딩 실패 시 대체 샘플 데이터"""
-    st.info("대체 샘플 데이터를 생성합니다.")
+    st.warning("🔄 샘플 데이터로 대체합니다.")
     
     samples = []
     sample_texts = [
