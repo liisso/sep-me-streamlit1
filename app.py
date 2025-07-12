@@ -84,6 +84,7 @@ with st.expander("🧠 문제 풀이 전 상위 인지 점검 리스트"):
 if mode == "등급 추정 연습":
     st.subheader("🎯 [연습1] 학생 글의 등급 추정하기")
     texts = load_texts_from_github("grade")
+    texts = [txt for txt in texts if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
 
     if not texts:
         st.error("❗ 텍스트를 불러올 수 없습니다.")
@@ -124,6 +125,7 @@ if mode == "등급 추정 연습":
 else:
     st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
     texts = load_texts_from_github("score")
+    texts = [txt for txt in texts if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
 
     if not texts:
         st.error("❗ 텍스트를 불러올 수 없습니다.")
