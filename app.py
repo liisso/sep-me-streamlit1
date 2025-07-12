@@ -44,7 +44,7 @@ def get_score_file_urls():
     owner = "liisso"
     repo = "sep-me-streamlit1"
     branch = "main"
-    folder = "data/scre"  # 오타 감안해서 scre로 맞춤
+    folder = "data/scre"
     base_raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{folder}/"
 
     txt_files = fetch_github_file_list(owner, repo, branch, folder)
@@ -60,7 +60,7 @@ def main():
         st.session_state.user_name = ""
         st.session_state.agreed = False
         st.session_state.mode = None
-        st.session_state.num_questions = 3  # 기본 3문항
+        st.session_state.num_questions = 3
 
     steps = {
         0: show_start_screen,
@@ -73,7 +73,7 @@ def main():
     }
     steps[st.session_state.step]()
 
-# --- 화면 0: 이름 입력 및 개인정보 동의 ---
+# --- 화면 0 ---
 def show_start_screen():
     st.title("📘 학생 글 채점 연습 프로그램 SEP ME 6")
     st.session_state.user_name = st.text_input("이름을 입력하세요")
@@ -88,7 +88,7 @@ def show_start_screen():
         else:
             st.session_state.step = 1
 
-# --- 화면 1: 과제/기준/예시문 ---
+# --- 화면 1 ---
 def show_intro():
     st.subheader("쓰기 과제 및 평가 기준 안내")
     with st.expander("📝 쓰기 과제 보기"):
@@ -100,7 +100,7 @@ def show_intro():
     if st.button("연습 유형 선택으로 이동"):
         st.session_state.step = 2
 
-# --- 화면 2: 연습 유형 선택 ---
+# --- 화면 2 ---
 def show_mode_selection():
     st.subheader("연습 유형을 선택하세요")
     mode = st.radio("실시할 연습 모드 선택", ["등급 추정만 하기", "점수 추정만 하기", "두 연습 모두 하기"])
@@ -115,7 +115,7 @@ def show_mode_selection():
             st.session_state.mode = "both"
             st.session_state.step = 3
 
-# --- 화면 3: 상위 인지 점검 ---
+# --- 화면 3 ---
 def show_metacognition_checklist():
     st.subheader("상위 인지 점검 항목")
     items = [
