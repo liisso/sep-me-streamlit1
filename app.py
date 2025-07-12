@@ -7,13 +7,6 @@ import pandas as pd
 st.set_page_config(page_title="SEP ME ver.6", page_icon="📝", layout="wide")
 
 # ========== 경로 진단 ==========
-def show_path_diagnostics():
-    st.write("📁 현재 작업 디렉터리:", os.getcwd())
-    for folder in ["data", "data/grade", "data/score", "data/f_grade", "data/f_score"]:
-        st.write(f"폴더 {folder} 존재:", os.path.exists(folder))
-        if os.path.exists(folder):
-            st.write(f"{folder} 파일:", os.listdir(folder))
-
 # ========== 데이터 로딩 ==========
 def load_student_texts(folder, type_):
     samples = []
