@@ -24,19 +24,20 @@ def load_student_texts():
     grade_files = glob.glob("data/grade/*.txt")
     grade_files.sort()
     for file_path in grade_files:
-        try:
-            content = None
-            for encoding in ['utf-8', 'cp949', 'euc-kr']:
-                try:
-                    with open(file_path, 'r', encoding=encoding) as f:
-                        content = f.read()
-                    break
-                except UnicodeDecodeError:
-                    continue
-            if content is None:
+        lines = None
+        for encoding in ['utf-8', 'cp949', 'euc-kr']:
+            try:
+                with open(file_path, 'r', encoding=encoding) as f:
+                    lines = f.readlines()
+                break
+            except UnicodeDecodeError:
                 continue
-            lines = content.strip().split('\n')
-            if len(lines) >= 6:
+        if not lines:
+            continue
+        # 빈 줄 제거
+        lines = [l.rstrip('\n') for l in lines if l.strip()]
+        if len(lines) >= 6:
+            try:
                 file_id = int(lines[0].strip())
                 correct_grade = int(lines[1].strip())
                 content_score = int(lines[2].strip())
@@ -54,25 +55,25 @@ def load_student_texts():
                         'expression_score': expression_score,
                         'type': 'grade'
                     })
-        except Exception:
-            continue
+            except Exception as e:
+                st.warning(f"grade 파일 파싱 오류: {file_path} - {e}")
     # score 폴더
     score_files = glob.glob("data/score/*.txt")
     score_files.sort()
     for file_path in score_files:
-        try:
-            content = None
-            for encoding in ['utf-8', 'cp949', 'euc-kr']:
-                try:
-                    with open(file_path, 'r', encoding=encoding) as f:
-                        content = f.read()
-                    break
-                except UnicodeDecodeError:
-                    continue
-            if content is None:
+        lines = None
+        for encoding in ['utf-8', 'cp949', 'euc-kr']:
+            try:
+                with open(file_path, 'r', encoding=encoding) as f:
+                    lines = f.readlines()
+                break
+            except UnicodeDecodeError:
                 continue
-            lines = content.strip().split('\n')
-            if len(lines) >= 6:
+        if not lines:
+            continue
+        lines = [l.rstrip('\n') for l in lines if l.strip()]
+        if len(lines) >= 6:
+            try:
                 file_id = int(lines[0].strip())
                 correct_grade = int(lines[1].strip())
                 content_score = int(lines[2].strip())
@@ -90,40 +91,13 @@ def load_student_texts():
                         'expression_score': expression_score,
                         'type': 'score'
                     })
-        except Exception:
-            continue
-    if samples:
-        # 문제 번호 순 정렬
-        samples = sorted(samples, key=lambda x: (x['type'], x['file_id']))
-        return samples
-    else:
-        return generate_fallback_data()
-
-def generate_fallback_data():
-    samples = []
-    sample_text = "샘플 학생 글입니다. 데이터 파일을 확인하세요."
-    for i in range(1, 16):
-        samples.append({
-            'id': i,
-            'file_id': i,
-            'text': sample_text,
-            'correct_grade': 3,
-            'content_score': 10,
-            'organization_score': 7,
-            'expression_score': 7,
-            'type': 'grade'
-        })
-    for i in range(1, 16):
-        samples.append({
-            'id': i,
-            'file_id': i,
-            'text': sample_text,
-            'correct_grade': 3,
-            'content_score': 10,
-            'organization_score': 7,
-            'expression_score': 7,
-            'type': 'score'
-        })
+            except Exception as e:
+                st.warning(f"score 파일 파싱 오류: {file_path} - {e}")
+    # 진단: 실제 로드된 문제 번호 리스트 출력
+    st.write("로드된 grade 문제 번호:", [s['file_id'] for s in samples if s['type'] == 'grade'])
+    st.write("로드된 score 문제 번호:", [s['file_id'] for s in samples if s['type'] == 'score'])
+    if not samples:
+        st.error("학생 글 데이터가 1개도 없습니다. txt 파일 구조와 인코딩을 다시 확인하세요.")
     return samples
 
 def show_intro_page():
@@ -143,7 +117,6 @@ def show_intro_page():
 
 def show_assignment_info():
     st.title("📋 쓰기 과제 및 평가 기준")
-    st.info("평가를 시작하기 전에 쓰기 과제 및 쓰기 평가 기준을 확인해 주세요.")
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("📝 쓰기 과제")
@@ -216,14 +189,9 @@ def show_practice1():
         if selected_grade:
             is_correct = selected_grade == current_data['correct_grade']
             st.write(f"정답: {current_data['correct_grade']}등급, 선택: {selected_grade}등급")
-            feedback_paths = [
-                f"data/f_grade/{current_data['file_id']}.png",
-                f"data/g_feed/{current_data['file_id']}.png"
-            ]
-            for path in feedback_paths:
-                if os.path.exists(path):
-                    st.image(path, caption="상세 피드백")
-                    break
+            feedback_path = f"data/f_grade/{current_data['file_id']}.png"
+            if os.path.exists(feedback_path):
+                st.image(feedback_path, caption="상세 피드백")
             if q < len(grade_data):
                 if st.button("다음 문제 →"):
                     st.session_state.current_question += 1
@@ -255,14 +223,9 @@ def show_practice2():
             if st.form_submit_button("점수 제출하기"):
                 st.write(f"정답: 내용 {current_data['content_score']}, 조직 {current_data['organization_score']}, 표현 {current_data['expression_score']}")
                 st.write(f"총점: {total} / 정답 총점: {current_data['content_score'] + current_data['organization_score'] + current_data['expression_score']}")
-                feedback_paths = [
-                    f"data/f_score/{current_data['file_id']}.png",
-                    f"data/s_feed/{current_data['file_id']}.png"
-                ]
-                for path in feedback_paths:
-                    if os.path.exists(path):
-                        st.image(path, caption="상세 피드백")
-                        break
+                feedback_path = f"data/f_score/{current_data['file_id']}.png"
+                if os.path.exists(feedback_path):
+                    st.image(feedback_path, caption="상세 피드백")
                 if q < len(score_data):
                     if st.button("다음 문제 →"):
                         st.session_state.current_question += 1
