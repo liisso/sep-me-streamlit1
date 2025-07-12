@@ -824,6 +824,10 @@ def create_results_csv():
 def main():
     # 세션 상태 초기화
     initialize_session_state()
+
+       # 디렉토리 확인용 코드 삽입
+    import os
+    st.write("현재 작업 디렉터리:", os.getcwd())
     
     # 사이드바
     st.sidebar.title("📊 진행 현황")
