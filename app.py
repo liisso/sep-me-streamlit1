@@ -56,9 +56,9 @@ if "current_text" not in st.session_state:
 # 과제 안내 이미지
 with st.expander("📑 쓰기 과제 및 평가 기준 보기"):
     imgs = {
-        "쓰기 과제": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/assignment.png",
-        "평가 기준": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/standard.png",
-        "등급별 예시문": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/prompt.jpg"
+        "쓰기 과제": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/assignment.png",
+        "평가 기준": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/standard.png",
+        "등급별 예시문": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/prompt.jpg"
     }
     for label, url in imgs.items():
         img_data = load_image_from_url(url)
@@ -106,7 +106,7 @@ if mode == "등급 추정 연습":
                     st.success("✅ 정답입니다!")
                 else:
                     st.error("❌ 오답입니다.")
-                    img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/sep_6/f_grade/{text_id}.png"
+                    img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_grade/{text_id}.png"
                     img_data = load_image_from_url(img_url)
                     if img_data:
                         st.image(img_data, caption="등급 평가 해설")
@@ -178,7 +178,7 @@ else:
                     st.success("🎉 모든 점수를 정확히 맞추셨습니다!")
                 else:
                     st.error("📌 일부 점수가 오답입니다. 해설 이미지를 참고하세요.")
-                    img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/sep_6/f_score/{text_id}.png"
+                    img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_score/{text_id}.png"
                     img_data = load_image_from_url(img_url)
                     if img_data:
                         st.image(img_data, caption="요소별 평가 해설")
