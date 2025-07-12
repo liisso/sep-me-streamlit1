@@ -65,6 +65,7 @@ def main():
         6: show_summary_result,
     }
 
+    st.write(f"DEBUG - 현재 step: {st.session_state.step}")
     steps[st.session_state.step]()
 
 def show_start_screen():
@@ -143,6 +144,7 @@ def run_grade_practice():
             st.session_state.step = 5
         else:
             st.session_state.step = 6
+        st.session_state.submitted = False
         return
 
     lines = load_txt_from_url(st.session_state.grade_urls[idx])
@@ -210,6 +212,7 @@ def run_score_practice():
     total = st.session_state.num_questions
     if idx >= total:
         st.session_state.step = 6
+        st.session_state.score_submitted = False
         return
 
     lines = load_txt_from_url(st.session_state.score_urls[idx])
