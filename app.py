@@ -16,7 +16,6 @@ def initialize_session_state():
         st.session_state.practice2_results = []
         st.session_state.start_time = datetime.now()
         st.session_state.student_data = None
-        st.session_state.checklist = [False] * 7
 
 def load_student_texts():
     samples = []
@@ -109,6 +108,7 @@ def show_intro_page():
             if name and agreement:
                 st.session_state.user_name = name
                 st.session_state.stage = 'assignment_info'
+                st.success("등록이 완료되었습니다!")
                 st.rerun()
             else:
                 st.error("이름과 동의 체크를 모두 해주세요.")
@@ -134,25 +134,21 @@ def show_assignment_info():
     st.subheader("📝 등급별 예시 학생글")
     if os.path.exists("data/prompt.jpg"):
         st.image("data/prompt.jpg", caption="등급별 예시 학생글")
-    st.subheader("📝 최종 피드백 예시")
-    if os.path.exists("data/finalfeed.jpg"):
-        st.image("data/finalfeed.jpg", caption="최종 피드백 예시")
+    checklist_labels = [
+        "1. 학생 글을 평가하는 목적을 설정하고 평가 전략을 세웠다.",
+        "2. 쓰기 과제 및 평가 기준을 확인하고 변별 방법을 점검했다.",
+        "3. 평가 기준을 고려하여 예시문의 특징을 정확히 파악했다.",
+        "4. 평가 기준에 적합한 학생 글의 예를 머릿속으로 떠올렸다.",
+        "5. 학생 글을 일관되게 평가할 것을 다짐했다.",
+        "6. 학생 글을 공정하고 객관적으로 평가할 것을 다짐했다.",
+        "7. 평가 과정과 결과를 반성적으로 점검할 것을 다짐했다."
+    ]
     with st.form("checklist"):
         st.markdown("**상위 인지 요소 점검**")
-        checklist_labels = [
-            "1. 학생 글을 평가하는 목적을 설정하고 평가 전략을 세웠다.",
-            "2. 쓰기 과제 및 평가 기준을 확인하고 변별 방법을 점검했다.",
-            "3. 평가 기준을 고려하여 예시문의 특징을 정확히 파악했다.",
-            "4. 평가 기준에 적합한 학생 글의 예를 머릿속으로 떠올렸다.",
-            "5. 학생 글을 일관되게 평가할 것을 다짐했다.",
-            "6. 학생 글을 공정하고 객관적으로 평가할 것을 다짐했다.",
-            "7. 평가 과정과 결과를 반성적으로 점검할 것을 다짐했다."
-        ]
-        checks = []
         for i, label in enumerate(checklist_labels):
-            checks.append(st.checkbox(label, value=st.session_state.checklist[i], key=f"checklist_{i}"))
+            st.checkbox(label, key=f"checklist_{i}")
         if st.form_submit_button("다음 단계로 →", type="primary"):
-            st.session_state.checklist = checks.copy()
+            checks = [st.session_state.get(f"checklist_{i}", False) for i in range(7)]
             if all(checks):
                 st.session_state.stage = 'practice_selection'
                 st.session_state.student_data = load_student_texts()
@@ -200,21 +196,19 @@ def show_practice1():
         if selected_grade:
             is_correct = selected_grade == current_data['correct_grade']
             st.write(f"정답: {current_data['correct_grade']}등급, 선택: {selected_grade}등급")
-            feedback_paths = [
-                f"data/f_grade/{current_data['file_id']}.png"
-            ]
-            for path in feedback_paths:
-                if os.path.exists(path):
-                    st.image(path, caption="상세 피드백")
-                    break
+            if not is_correct:
+                feedback_path = f"data/f_grade/{current_data['file_id']}.png"
+                if os.path.exists(feedback_path):
+                    st.image(feedback_path, caption=f"문제 {current_data['file_id']}번 피드백")
+                else:
+                    st.info("피드백 이미지가 없습니다.")
             if q < len(grade_data):
                 if st.button("다음 문제 →"):
                     st.session_state.current_question += 1
                     st.rerun()
             else:
-                if st.button("연습2로 이동 →"):
-                    st.session_state.stage = 'practice2'
-                    st.session_state.current_question = 1
+                if st.button("결과 보기 →"):
+                    st.session_state.stage = 'results'
                     st.rerun()
     else:
         st.error("연습1 데이터가 부족합니다.")
@@ -238,13 +232,11 @@ def show_practice2():
             if st.form_submit_button("점수 제출하기"):
                 st.write(f"정답: 내용 {current_data['content_score']}, 조직 {current_data['organization_score']}, 표현 {current_data['expression_score']}")
                 st.write(f"총점: {total} / 정답 총점: {current_data['content_score'] + current_data['organization_score'] + current_data['expression_score']}")
-                feedback_paths = [
-                    f"data/f_score/{current_data['file_id']}.png"
-                ]
-                for path in feedback_paths:
-                    if os.path.exists(path):
-                        st.image(path, caption="상세 피드백")
-                        break
+                feedback_path = f"data/f_score/{current_data['file_id']}.png"
+                if os.path.exists(feedback_path):
+                    st.image(feedback_path, caption=f"문제 {current_data['file_id']}번 피드백")
+                else:
+                    st.info("피드백 이미지가 없습니다.")
                 if q < len(score_data):
                     if st.button("다음 문제 →"):
                         st.session_state.current_question += 1
