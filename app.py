@@ -6,6 +6,28 @@ from PIL import Image
 
 st.set_page_config(page_title="논설문 평가 연습", layout="wide")
 
+# --- 사이드바 ---
+with st.sidebar:
+    st.header("📌 진행 내역")
+    st.write("사용자: ", st.session_state.get("username", "(미입력)"))
+
+    mode = st.session_state.get("mode", "등급 추정 연습")
+    st.write("현재 모드:", mode)
+
+    if mode == "등급 추정 연습":
+        current_text = st.session_state.get("current_text_grade")
+    else:
+        current_text = st.session_state.get("current_text_score")
+
+    current_q = current_text[0] if current_text else "(없음)"
+    st.write("현재 문항 번호:", current_q)
+
+    if st.button("◀ 이전 화면으로 이동"):
+        st.session_state.page = "instructions"
+        st.session_state.current_text_grade = None
+        st.session_state.current_text_score = None
+        st.session_state.submitted = False
+
 # 이미지 불러오기 함수
 def load_image_from_url(url):
     response = requests.get(url)
@@ -32,6 +54,10 @@ def load_texts_from_github(folder):
     except:
         return []
 
+if st.session_state.next_trigger:
+    st.session_state.next_trigger = False
+    st.experimental_rerun()
+
 # 학생 글 표시 함수
 def render_student_text(text):
     st.markdown(
@@ -47,6 +73,8 @@ def render_student_text(text):
     )
 
 # 사용자 정보 입력 단계
+if "next_trigger" not in st.session_state:
+    st.session_state.next_trigger = False
 if "username" not in st.session_state:
     st.session_state.page = "intro"
 
@@ -85,6 +113,7 @@ elif st.session_state.page == "practice":
     """)
 
     mode = st.radio("연습 모드를 선택하세요", ["등급 추정 연습", "점수 추정 연습"])
+    st.session_state.mode = mode
 
     if "submitted" not in st.session_state:
         st.session_state.submitted = False
@@ -127,10 +156,10 @@ elif st.session_state.page == "practice":
                     else:
                         st.warning(f"이미지를 불러올 수 없습니다: {img_url}")
 
-            if st.session_state.submitted:
-                if st.button("다음 문제로 이동", key="next_grade"):
-                    st.session_state.current_text_grade = None
-                    st.session_state.submitted = False
+            if st.session_state.submitted and st.button("다음 문제로 이동", key="next_grade"):
+    st.session_state.current_text_grade = None
+    st.session_state.submitted = False
+    st.session_state.next_trigger = True
 
     elif mode == "점수 추정 연습":
         st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
@@ -198,7 +227,7 @@ elif st.session_state.page == "practice":
                     else:
                         st.warning(f"이미지를 불러올 수 없습니다: {img_url}")
 
-            if st.session_state.submitted:
-                if st.button("다음 문제로 이동", key="next_score"):
-                    st.session_state.current_text_score = None
-                    st.session_state.submitted = False
+            if st.session_state.submitted and st.button("다음 문제로 이동", key="next_score"):
+    st.session_state.current_text_score = None
+    st.session_state.submitted = False
+    st.session_state.next_trigger = True
