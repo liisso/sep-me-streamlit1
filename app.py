@@ -122,7 +122,7 @@ elif st.session_state.page == "practice":
 
     elif mode == "점수 추정 연습":
         st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
-        texts = [txt for txt in load_texts_from_github("score") if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
+        texts = [txt for txt in load_texts_from_github("scre") if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
         existing_ids = sorted(int(txt[0].strip()) for txt in texts)
         st.sidebar.write(f"📂 불러온 문항 번호: {existing_ids}")
         if not st.session_state.current_text_score:
