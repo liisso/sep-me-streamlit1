@@ -1,5 +1,4 @@
 import streamlit as st
-import os
 import random
 import requests
 from io import BytesIO
@@ -8,16 +7,14 @@ from PIL import Image
 st.set_page_config(page_title="논설문 평가 연습", layout="wide")
 st.title("✍️ 논설문 평가 연습 프로그램 (SEP ME Web Edition)")
 
-# 이미지 로딩 함수
+# 이미지 불러오기
 def load_image_from_url(url):
     response = requests.get(url)
     if response.status_code == 200 and "image" in response.headers.get("Content-Type", ""):
         return BytesIO(response.content)
-    else:
-        st.warning(f"이미지를 불러올 수 없습니다: {url}")
-        return None
+    return None
 
-# 텍스트 데이터 로딩
+# 텍스트 데이터 불러오기
 @st.cache_data
 def load_texts_from_github(folder):
     base_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/{folder}/"
@@ -36,7 +33,7 @@ def load_texts_from_github(folder):
     except:
         return []
 
-# HTML로 학생 글 출력
+# 학생 글 표시
 def render_student_text(text):
     st.markdown(
         f"""
@@ -50,7 +47,13 @@ def render_student_text(text):
         unsafe_allow_html=True
     )
 
-# 과제 및 기준 이미지 안내
+# 세션 상태 초기화
+if "submitted" not in st.session_state:
+    st.session_state.submitted = False
+if "current_text" not in st.session_state:
+    st.session_state.current_text = None
+
+# 과제 안내 이미지
 with st.expander("📑 쓰기 과제 및 평가 기준 보기"):
     imgs = {
         "쓰기 과제": "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/assignment.png",
@@ -62,18 +65,31 @@ with st.expander("📑 쓰기 과제 및 평가 기준 보기"):
         if img_data:
             st.image(img_data, caption=label)
 
-# 연습 모드 선택
+# 모드 선택
 mode = st.radio("연습 모드를 선택하세요", ["등급 추정 연습", "점수 추정 연습"])
 
-# [연습1] 등급 추정
+# 상위 인지 점검 체크리스트
+with st.expander("🧠 문제 풀이 전 상위 인지 점검 리스트"):
+    st.markdown("""
+    - ✅ 글의 **주제가 분명히** 드러났는가?
+    - ✅ 자신의 **주장이 일관성 있게** 유지되었는가?
+    - ✅ 제시한 **근거가 충분하고 타당한가?**
+    - ✅ 글의 **구성과 전개가 자연스러운가?**
+    - ✅ 문장 **표현이 명확하고 오류가 없는가?**
+    """)
+
+# [1] 등급 추정 연습
 if mode == "등급 추정 연습":
     st.subheader("🎯 [연습1] 학생 글의 등급 추정하기")
-
     texts = load_texts_from_github("grade")
+
     if not texts:
-        st.error("❗ 등급 연습용 텍스트를 불러오지 못했습니다.")
+        st.error("❗ 텍스트를 불러올 수 없습니다.")
     else:
-        selected = random.choice(texts)
+        if not st.session_state.current_text:
+            st.session_state.current_text = random.choice(texts)
+
+        selected = st.session_state.current_text
         text_id = selected[0].strip()
         correct_grade = int(selected[1].strip())
         student_text = "\n".join(selected[5:])
@@ -81,26 +97,36 @@ if mode == "등급 추정 연습":
         st.markdown("#### 학생 글")
         render_student_text(student_text)
 
-        user_grade = st.radio("예상 등급을 선택하세요 (1: 우수 ~ 5: 미흡)", [1, 2, 3, 4, 5], horizontal=True)
-        if st.button("제출", key="grade_submit"):
-            if user_grade == correct_grade:
-                st.success("✅ 정답입니다! 정확하게 맞추셨습니다.")
-            else:
-                st.error("❌ 오답입니다. 아래 해설을 확인해 보세요.")
-                img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/sep_6/f_grade/{text_id}.png"
-                img_data = load_image_from_url(img_url)
-                if img_data:
-                    st.image(img_data, caption="등급 평가 해설")
+        user_grade = st.radio("예상 등급을 선택하세요", [1, 2, 3, 4, 5], horizontal=True)
 
-# [연습2] 점수 추정
+        if not st.session_state.submitted:
+            if st.button("제출", key="submit_grade"):
+                st.session_state.submitted = True
+                if user_grade == correct_grade:
+                    st.success("✅ 정답입니다!")
+                else:
+                    st.error("❌ 오답입니다.")
+                    img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/sep_6/f_grade/{text_id}.png"
+                    img_data = load_image_from_url(img_url)
+                    if img_data:
+                        st.image(img_data, caption="등급 평가 해설")
+        else:
+            if st.button("다음 문제로 이동", key="next_grade"):
+                st.session_state.current_text = random.choice(texts)
+                st.session_state.submitted = False
+
+# [2] 점수 추정 연습
 else:
     st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
-
     texts = load_texts_from_github("score")
+
     if not texts:
-        st.error("❗ 점수 연습용 텍스트를 불러오지 못했습니다.")
+        st.error("❗ 텍스트를 불러올 수 없습니다.")
     else:
-        selected = random.choice(texts)
+        if not st.session_state.current_text:
+            st.session_state.current_text = random.choice(texts)
+
+        selected = st.session_state.current_text
         text_id = selected[0].strip()
         answer_c = int(selected[2].strip())
         answer_o = int(selected[3].strip())
@@ -118,36 +144,42 @@ else:
         with col3:
             user_e = st.number_input("표현 점수 (2~12)", min_value=2, max_value=12, step=1)
 
-        if st.button("제출", key="score_submit"):
-            result_msg = []
-            correct_all = True
+        if not st.session_state.submitted:
+            if st.button("제출", key="submit_score"):
+                st.session_state.submitted = True
+                messages = []
+                correct_all = True
 
-            if abs(user_c - answer_c) <= 1:
-                result_msg.append("✅ 내용 점수: 정답")
-            else:
-                result_msg.append("❌ 내용 점수: 오답")
-                correct_all = False
+                if abs(user_c - answer_c) <= 1:
+                    messages.append("✅ 내용 점수: 정답")
+                else:
+                    messages.append("❌ 내용 점수: 오답")
+                    correct_all = False
 
-            if abs(user_o - answer_o) <= 1:
-                result_msg.append("✅ 조직 점수: 정답")
-            else:
-                result_msg.append("❌ 조직 점수: 오답")
-                correct_all = False
+                if abs(user_o - answer_o) <= 1:
+                    messages.append("✅ 조직 점수: 정답")
+                else:
+                    messages.append("❌ 조직 점수: 오답")
+                    correct_all = False
 
-            if abs(user_e - answer_e) <= 1:
-                result_msg.append("✅ 표현 점수: 정답")
-            else:
-                result_msg.append("❌ 표현 점수: 오답")
-                correct_all = False
+                if abs(user_e - answer_e) <= 1:
+                    messages.append("✅ 표현 점수: 정답")
+                else:
+                    messages.append("❌ 표현 점수: 오답")
+                    correct_all = False
 
-            for msg in result_msg:
-                st.write(msg)
+                for m in messages:
+                    st.write(m)
 
-            if correct_all:
-                st.success("🎉 모든 점수를 정확하게 추정하셨습니다!")
-            else:
-                st.error("📌 일부 점수가 오답입니다. 해설 이미지를 참고하세요.")
-                img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/sep_6/f_score/{text_id}.png"
-                img_data = load_image_from_url(img_url)
-                if img_data:
-                    st.image(img_data, caption="요소별 평가 해설")
+                if correct_all:
+                    st.success("🎉 모든 점수를 정확히 맞추셨습니다!")
+                else:
+                    st.error("📌 일부 점수가 오답입니다. 해설 이미지를 참고하세요.")
+                    img_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/sep_6/f_score/{text_id}.png"
+                    img_data = load_image_from_url(img_url)
+                    if img_data:
+                        st.image(img_data, caption="요소별 평가 해설")
+        else:
+            if st.button("다음 문제로 이동", key="next_score"):
+                st.session_state.current_text = random.choice(texts)
+                st.session_state.submitted = False
