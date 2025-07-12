@@ -135,6 +135,7 @@ def show_metacognition_checklist():
 # --- 화면 4: 등급 추정 연습 ---
 def run_grade_practice():
     st.subheader("✏️ [연습1] 글의 등급 추정하기")
+
     if 'grade_urls' not in st.session_state:
         urls = get_grade_file_urls()
         if not urls:
@@ -144,7 +145,7 @@ def run_grade_practice():
         st.session_state.grade_urls = urls[:st.session_state.num_questions]
         st.session_state.grade_index = 0
         st.session_state.grade_results = []
-        st.session_state.submitted = False  # 제출 상태 초기화
+        st.session_state.submitted = False
 
     idx = st.session_state.grade_index
     if idx >= st.session_state.num_questions:
@@ -157,6 +158,8 @@ def run_grade_practice():
     except Exception as e:
         st.error(f"파일 파싱 중 오류 발생: {e}")
         return
+
+    st.markdown(f"### 문항 번호: {q_num}")
 
     st.markdown(
         f"""
@@ -175,23 +178,22 @@ def run_grade_practice():
         unsafe_allow_html=True
     )
 
-    user_choice = st.radio("예상 등급을 선택하세요:", ["1", "2", "3", "4", "5"], key=f"grade_{idx}")
-
     if not st.session_state.submitted:
+        user_choice = st.radio("예상 등급을 선택하세요:", ["1", "2", "3", "4", "5"], key=f"grade_{idx}")
         if st.button("제출", key=f"grade_submit_{idx}"):
             st.session_state.submitted = True
-            try:
-                if int(user_choice) == answer:
-                    st.success("정답입니다!")
-                    st.session_state.grade_results.append(f"{q_num}번 문항: 정답")
-                else:
-                    st.error("오답입니다. 아래 피드백을 참고하세요.")
-                    st.image(f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_grade/{q_num}.png")
-                    st.session_state.grade_results.append(f"{q_num}번 문항: 오답")
-            except Exception as e:
-                st.error(f"채점 중 오류가 발생했습니다: {e}")
-                st.session_state.submitted = False
+            st.session_state.user_choice = int(user_choice)
     else:
+        if st.session_state.user_choice == answer:
+            st.success("정답입니다!")
+            if f"{q_num}번 문항: 정답" not in st.session_state.grade_results:
+                st.session_state.grade_results.append(f"{q_num}번 문항: 정답")
+        else:
+            st.error("오답입니다. 아래 피드백을 참고하세요.")
+            st.image(f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_grade/{q_num}.png")
+            if f"{q_num}번 문항: 오답" not in st.session_state.grade_results:
+                st.session_state.grade_results.append(f"{q_num}번 문항: 오답")
+
         if st.button("다음", key=f"grade_next_{idx}"):
             st.session_state.grade_index += 1
             st.session_state.submitted = False
@@ -200,6 +202,7 @@ def run_grade_practice():
 # --- 화면 5: 점수 추정 연습 ---
 def run_score_practice():
     st.subheader("✏️ [연습2] 글의 점수 추정하기")
+
     if 'score_urls' not in st.session_state:
         urls = get_score_file_urls()
         if not urls:
@@ -209,7 +212,7 @@ def run_score_practice():
         st.session_state.score_urls = urls[:st.session_state.num_questions]
         st.session_state.score_index = 0
         st.session_state.score_results = []
-        st.session_state.score_submitted = False  # 제출 상태 초기화
+        st.session_state.score_submitted = False
 
     idx = st.session_state.score_index
     if idx >= st.session_state.num_questions:
@@ -222,6 +225,8 @@ def run_score_practice():
     except Exception as ex:
         st.error(f"파일 파싱 중 오류 발생: {ex}")
         return
+
+    st.markdown(f"### 문항 번호: {q_num}")
 
     st.markdown(
         f"""
@@ -240,33 +245,34 @@ def run_score_practice():
         unsafe_allow_html=True
     )
 
-    uc = st.number_input("내용 점수 (3~18)", 3, 18, key=f"uc_{idx}")
-    uo = st.number_input("조직 점수 (2~12)", 2, 12, key=f"uo_{idx}")
-    ue = st.number_input("표현 점수 (2~12)", 2, 12, key=f"ue_{idx}")
-
     if not st.session_state.score_submitted:
+        uc = st.number_input("내용 점수 (3~18)", 3, 18, key=f"uc_{idx}")
+        uo = st.number_input("조직 점수 (2~12)", 2, 12, key=f"uo_{idx}")
+        ue = st.number_input("표현 점수 (2~12)", 2, 12, key=f"ue_{idx}")
         if st.button("제출", key=f"score_submit_{idx}"):
             st.session_state.score_submitted = True
-            try:
-                is_c = abs(uc - c) <= 1
-                is_o = abs(uo - o) <= 1
-                is_e = abs(ue - e) <= 1
-
-                st.write(f"- 내용: {'정답' if is_c else '오답'}")
-                st.write(f"- 조직: {'정답' if is_o else '오답'}")
-                st.write(f"- 표현: {'정답' if is_e else '오답'}")
-
-                if is_c and is_o and is_e:
-                    st.success("모든 요소 정답입니다!")
-                    st.session_state.score_results.append(f"{q_num}번 문항: 정답")
-                else:
-                    st.error("오답 항목이 있습니다.")
-                    st.image(f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_score/{q_num}.png")
-                    st.session_state.score_results.append(f"{q_num}번 문항: 오답")
-            except Exception as ex:
-                st.error(f"채점 중 오류가 발생했습니다: {ex}")
-                st.session_state.score_submitted = False
+            st.session_state.uc = uc
+            st.session_state.uo = uo
+            st.session_state.ue = ue
     else:
+        is_c = abs(st.session_state.uc - c) <= 1
+        is_o = abs(st.session_state.uo - o) <= 1
+        is_e = abs(st.session_state.ue - e) <= 1
+
+        st.write(f"- 내용: {'정답' if is_c else '오답'}")
+        st.write(f"- 조직: {'정답' if is_o else '오답'}")
+        st.write(f"- 표현: {'정답' if is_e else '오답'}")
+
+        if is_c and is_o and is_e:
+            st.success("모든 요소 정답입니다!")
+            if f"{q_num}번 문항: 정답" not in st.session_state.score_results:
+                st.session_state.score_results.append(f"{q_num}번 문항: 정답")
+        else:
+            st.error("오답 항목이 있습니다.")
+            st.image(f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_score/{q_num}.png")
+            if f"{q_num}번 문항: 오답" not in st.session_state.score_results:
+                st.session_state.score_results.append(f"{q_num}번 문항: 오답")
+
         if st.button("다음", key=f"score_next_{idx}"):
             st.session_state.score_index += 1
             st.session_state.score_submitted = False
@@ -275,11 +281,11 @@ def run_score_practice():
 # --- 화면 6: 결과 ---
 def show_summary_result():
     st.title("📊 연습 결과 요약")
-    if 'grade_results' in st.session_state:
+    if 'grade_results' in st.session_state and st.session_state.grade_results:
         st.subheader("등급 추정 결과")
         for r in st.session_state.grade_results:
             st.markdown(f"- {r}")
-    if 'score_results' in st.session_state:
+    if 'score_results' in st.session_state and st.session_state.score_results:
         st.subheader("점수 추정 결과")
         for r in st.session_state.score_results:
             st.markdown(f"- {r}")
