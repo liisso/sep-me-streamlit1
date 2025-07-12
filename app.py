@@ -86,7 +86,7 @@ elif st.session_state.page == "practice":
         st.subheader("🎯 [연습1] 학생 글의 등급 추정하기")
         texts = [txt for txt in load_texts_from_github("grade") if txt[0].isdigit() and 1 <= int(txt[0]) <= 15]
         if not st.session_state.current_text_grade:
-            st.session_state.current_text_grade = random.choice(texts)
+            st.session_state.current_text_grade = next((txt for txt in sorted(texts, key=lambda x: int(x[0])) if int(txt[0]) == 1), None)
         sel = st.session_state.current_text_grade
         text_id, correct_grade, student_text = sel[0], int(sel[1]), "\n".join(sel[5:])
 
@@ -107,15 +107,17 @@ elif st.session_state.page == "practice":
                     st.warning(f"이미지를 불러올 수 없습니다: {url}")
 
         if st.session_state.submitted and st.button("다음 문제로 이동", key="next_grade"):
-            st.session_state.current_text_grade = None
-            st.session_state.submitted = False
-            st.session_state.next_trigger = True
+            current_id = int(st.session_state.current_text_grade[0])
+            next_text = next((txt for txt in sorted(texts, key=lambda x: int(x[0])) if int(txt[0]) == current_id + 1), None)
+            if next_text:
+                st.session_state.current_text_grade = next_text
+                st.session_state.submitted = False
 
     elif mode == "점수 추정 연습":
         st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
         texts = [txt for txt in load_texts_from_github("score") if txt[0].isdigit() and 1 <= int(txt[0]) <= 15]
         if not st.session_state.current_text_score:
-            st.session_state.current_text_score = random.choice(texts)
+            st.session_state.current_text_score = next((txt for txt in sorted(texts, key=lambda x: int(x[0])) if int(x[0]) == 1), None)
         sel = st.session_state.current_text_score
         text_id, a_c, a_o, a_e = sel[0], int(sel[2]), int(sel[3]), int(sel[4])
         student_text = "\n".join(sel[5:])
@@ -148,6 +150,8 @@ elif st.session_state.page == "practice":
                     st.warning(f"이미지를 불러올 수 없습니다: {url}")
 
         if st.session_state.submitted and st.button("다음 문제로 이동", key="next_score"):
-            st.session_state.current_text_score = None
-            st.session_state.submitted = False
-            st.session_state.next_trigger = True
+            current_id = int(st.session_state.current_text_score[0])
+            next_text = next((txt for txt in sorted(texts, key=lambda x: int(x[0])) if int(x[0]) == current_id + 1), None)
+            if next_text:
+                st.session_state.current_text_score = next_text
+                st.session_state.submitted = False
