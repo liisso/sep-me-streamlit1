@@ -22,28 +22,92 @@ def initialize_session_state():
         st.session_state.practice2_results = []
         st.session_state.start_time = datetime.now()
 
-def load_sample_data():
-    """샘플 데이터 로드"""
-    # 실제 파일이 있으면 로드, 없으면 샘플 데이터 생성
-    try:
-        if os.path.exists("data/samples.csv"):
-            df = pd.read_csv("data/samples.csv")
-            return df.to_dict('records')
-    except:
-        pass
+def load_student_texts():
+    """원래 방식으로 txt 파일에서 학생 글 로드"""
+    samples = []
     
-    # 샘플 데이터 생성
-    sample_texts = []
+    st.write("📁 학생 글 데이터 로딩 중...")
+    
+    # 연습1용 데이터 (grade 폴더)
+    grade_count = 0
+    for i in range(1, 16):
+        try:
+            file_path = f"data/grade/{i}.txt"
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    text = f.read().strip()
+                    if text:  # 빈 파일이 아닌 경우만
+                        samples.append({
+                            'id': i,
+                            'text': text,
+                            'correct_grade': random.randint(1, 5),  # 실제로는 별도 정답 파일에서
+                            'content_score': random.randint(8, 16),
+                            'organization_score': random.randint(4, 10),
+                            'expression_score': random.randint(4, 10),
+                            'type': 'grade'
+                        })
+                        grade_count += 1
+        except Exception as e:
+            st.warning(f"grade/{i}.txt 파일 읽기 오류: {e}")
+    
+    # 연습2용 데이터 (score 폴더)
+    score_count = 0
+    for i in range(1, 16):
+        try:
+            file_path = f"data/score/{i}.txt"
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    text = f.read().strip()
+                    if text:  # 빈 파일이 아닌 경우만
+                        samples.append({
+                            'id': i + 15,
+                            'text': text,
+                            'correct_grade': random.randint(1, 5),
+                            'content_score': random.randint(8, 16),
+                            'organization_score': random.randint(4, 10),
+                            'expression_score': random.randint(4, 10),
+                            'type': 'score'
+                        })
+                        score_count += 1
+        except Exception as e:
+            st.warning(f"score/{i}.txt 파일 읽기 오류: {e}")
+    
+    # 로딩 결과 표시
+    if grade_count > 0 or score_count > 0:
+        st.success(f"✅ 학생 글 로딩 완료: 연습1({grade_count}개), 연습2({score_count}개)")
+        return samples
+    else:
+        st.warning("⚠️ txt 파일을 찾을 수 없습니다. 샘플 데이터를 사용합니다.")
+        return generate_sample_data()
+
+def generate_sample_data():
+    """샘플 데이터 생성 (txt 파일이 없을 때)"""
+    sample_texts = [
+        "환경 보호는 우리 모두의 책임입니다. 지구 온난화로 인해 빙하가 녹고 있고, 해수면이 상승하고 있습니다. 우리는 일회용품 사용을 줄이고, 재활용을 실천해야 합니다. 또한 대중교통을 이용하고, 에너지를 절약해야 합니다. 작은 실천이 모여 큰 변화를 만들 수 있습니다. 개인의 노력뿐만 아니라 정부와 기업의 적극적인 참여가 필요합니다.",
+        
+        "독서는 인생을 풍요롭게 만드는 활동입니다. 책을 통해 다양한 지식을 얻을 수 있고, 상상력을 기를 수 있습니다. 또한 독서는 스트레스를 해소하고 집중력을 향상시킵니다. 하루에 조금씩이라도 책을 읽는 습관을 기르는 것이 중요합니다. 디지털 시대에도 종이책의 가치는 여전히 소중합니다.",
+        
+        "스마트폰의 과도한 사용은 여러 문제를 야기합니다. 목과 어깨 통증, 시력 저하, 수면 장애 등이 대표적입니다. 또한 대면 소통 능력이 떨어지고 집중력이 저하됩니다. 스마트폰 사용 시간을 제한하고 규칙적인 휴식을 취해야 합니다.",
+        
+        "교육의 중요성에 대해 논하고자 합니다. 교육은 개인의 성장과 사회 발전의 기초가 됩니다. 올바른 교육을 통해 인격을 형성하고 지식을 습득할 수 있습니다. 또한 교육은 사회적 불평등을 해소하고 민주주의를 발전시키는 역할을 합니다.",
+        
+        "건강한 생활습관의 중요성을 강조하고 싶습니다. 규칙적인 운동과 균형 잡힌 식사는 건강의 기본입니다. 또한 충분한 수면과 스트레스 관리도 중요합니다. 건강한 몸과 마음을 유지하기 위해 꾸준한 노력이 필요합니다."
+    ]
+    
+    samples = []
     for i in range(30):
-        sample_texts.append({
+        text_idx = i % len(sample_texts)
+        samples.append({
             'id': i + 1,
-            'text': f"환경 보호는 우리 모두의 책임입니다. 지구 온난화로 인해 빙하가 녹고 있고, 해수면이 상승하고 있습니다. 우리는 일회용품 사용을 줄이고, 재활용을 실천해야 합니다. 또한 대중교통을 이용하고, 에너지를 절약해야 합니다. 작은 실천이 모여 큰 변화를 만들 수 있습니다. (문제 {i+1}번 샘플 텍스트)",
+            'text': sample_texts[text_idx],
             'correct_grade': random.randint(1, 5),
             'content_score': random.randint(8, 16),
             'organization_score': random.randint(4, 10),
-            'expression_score': random.randint(4, 10)
+            'expression_score': random.randint(4, 10),
+            'type': 'grade' if i < 15 else 'score'
         })
-    return sample_texts
+    
+    return samples
 
 def show_intro_page():
     """소개 페이지"""
@@ -134,7 +198,7 @@ def show_assignment_info():
         if st.form_submit_button("연습 시작하기", type="primary", use_container_width=True):
             if all([check1, check2, check3, check4, check5, check6, check7]):
                 st.session_state.stage = 'practice1'
-                st.session_state.student_data = load_sample_data()
+                st.session_state.student_data = load_student_texts()
                 st.success("모든 준비가 완료되었습니다! 연습을 시작합니다.")
                 st.rerun()
             else:
@@ -149,179 +213,75 @@ def show_practice1():
     st.progress(progress)
     st.markdown(f"**진행 상황: {st.session_state.current_question}/15 문제**")
     
-    # 현재 문제
-    if 'student_data' in st.session_state:
-        current_data = st.session_state.student_data[st.session_state.current_question - 1]
+    # 현재 문제 데이터 가져오기
+    if 'student_data' in st.session_state and st.session_state.student_data:
+        # 연습1용 데이터만 필터링 (처음 15개 또는 type이 'grade'인 것)
+        grade_data = [item for item in st.session_state.student_data if item.get('type') == 'grade'][:15]
         
-        st.markdown("### 📖 학생 글")
-        st.markdown(f"""
-        <div style="
-            background-color: #f8f9fa;
-            padding: 2rem;
-            border-radius: 10px;
-            border-left: 5px solid #007bff;
-            margin: 1rem 0;
-            font-size: 1.1rem;
-            line-height: 1.6;
-        ">
-        <strong>문제 {st.session_state.current_question}번</strong><br><br>
-        {current_data['text']}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # 등급 선택
-        st.markdown("### 🎯 이 글의 등급을 선택하세요")
-        
-        cols = st.columns(5)
-        selected_grade = None
-        
-        grade_options = {
-            1: "1등급\n(29-33점)",
-            2: "2등급\n(27-28점)",
-            3: "3등급\n(24-26점)",
-            4: "4등급\n(20-23점)",
-            5: "5등급\n(13-19점)"
-        }
-        
-        for i, (grade, description) in enumerate(grade_options.items()):
-            with cols[i]:
-                if st.button(description, key=f"grade_{grade}", use_container_width=True):
-                    selected_grade = grade
-        
-        if selected_grade:
-            # 결과 저장
-            is_correct = selected_grade == current_data['correct_grade']
-            result = {
-                'question': st.session_state.current_question,
-                'selected': selected_grade,
-                'correct': current_data['correct_grade'],
-                'is_correct': is_correct,
-                'timestamp': datetime.now()
+        if len(grade_data) >= st.session_state.current_question:
+            current_data = grade_data[st.session_state.current_question - 1]
+            
+            st.markdown("### 📖 학생 글")
+            st.markdown(f"""
+            <div style="
+                background-color: #f8f9fa;
+                padding: 2rem;
+                border-radius: 10px;
+                border-left: 5px solid #007bff;
+                margin: 1rem 0;
+                font-size: 1.1rem;
+                line-height: 1.6;
+            ">
+            <strong>문제 {st.session_state.current_question}번</strong><br><br>
+            {current_data['text']}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 등급 선택
+            st.markdown("### 🎯 이 글의 등급을 선택하세요")
+            
+            cols = st.columns(5)
+            selected_grade = None
+            
+            grade_options = {
+                1: "1등급\n(29-33점)",
+                2: "2등급\n(27-28점)",
+                3: "3등급\n(24-26점)",
+                4: "4등급\n(20-23점)",
+                5: "5등급\n(13-19점)"
             }
             
-            # 중복 저장 방지
-            if not any(r['question'] == st.session_state.current_question for r in st.session_state.practice1_results):
-                st.session_state.practice1_results.append(result)
+            for i, (grade, description) in enumerate(grade_options.items()):
+                with cols[i]:
+                    if st.button(description, key=f"grade_{grade}_{st.session_state.current_question}", use_container_width=True):
+                        selected_grade = grade
             
-            # 피드백
-            st.markdown("---")
-            if is_correct:
-                st.success("🎉 정답입니다! 훌륭한 판단력을 보여주셨습니다.")
-            else:
-                st.error(f"😔 아쉽지만 오답입니다. 정답: {current_data['correct_grade']}등급, 선택: {selected_grade}등급")
-                
-                # 피드백 이미지 표시
-                feedback_path = f"data/g_feed/{st.session_state.current_question}.png"
-                if os.path.exists(feedback_path):
-                    st.image(feedback_path, caption="상세 피드백")
-            
-            # 다음 문제로
-            st.markdown("---")
-            col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
-            
-            with col_btn2:
-                if st.session_state.current_question < 15:
-                    if st.button("다음 문제 →", type="primary", use_container_width=True):
-                        st.session_state.current_question += 1
-                        st.rerun()
-                else:
-                    if st.button("연습2로 이동 →", type="primary", use_container_width=True):
-                        st.session_state.stage = 'practice2'
-                        st.session_state.current_question = 1
-                        st.rerun()
-
-def show_practice2():
-    """연습2 - 점수 추정"""
-    st.title("📊 연습2: 글의 점수 추정하기")
-    
-    # 진행률
-    progress = (st.session_state.current_question - 1) / 15
-    st.progress(progress)
-    st.markdown(f"**진행 상황: {st.session_state.current_question}/15 문제**")
-    
-    # 현재 문제
-    if 'student_data' in st.session_state:
-        current_data = st.session_state.student_data[15 + st.session_state.current_question - 1]
-        
-        st.markdown("### 📖 학생 글")
-        st.markdown(f"""
-        <div style="
-            background-color: #f8f9fa;
-            padding: 2rem;
-            border-radius: 10px;
-            border-left: 5px solid #007bff;
-            margin: 1rem 0;
-            font-size: 1.1rem;
-            line-height: 1.6;
-        ">
-        <strong>문제 {st.session_state.current_question}번</strong><br><br>
-        {current_data['text']}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # 점수 입력
-        st.markdown("### 🎯 영역별 점수를 입력하세요")
-        
-        with st.form(f"score_form_{st.session_state.current_question}"):
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.markdown("**내용 영역 (3-18점)**")
-                st.caption("주제 적합성, 내용의 충실성, 독창성")
-                content = st.number_input("내용 점수", min_value=3, max_value=18, value=10, label_visibility="collapsed")
-            
-            with col2:
-                st.markdown("**조직 영역 (2-12점)**")
-                st.caption("글의 구성, 단락 구성, 논리적 연결")
-                organization = st.number_input("조직 점수", min_value=2, max_value=12, value=7, label_visibility="collapsed")
-            
-            with col3:
-                st.markdown("**표현 영역 (2-12점)**")
-                st.caption("어휘 사용, 문장 표현, 맞춤법")
-                expression = st.number_input("표현 점수", min_value=2, max_value=12, value=7, label_visibility="collapsed")
-            
-            total = content + organization + expression
-            
-            # 총점 표시
-            st.markdown("---")
-            col_total1, col_total2, col_total3 = st.columns(3)
-            with col_total2:
-                st.markdown(f"""
-                <div style="
-                    background: white;
-                    padding: 1.5rem;
-                    border-radius: 12px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                    text-align: center;
-                    border: 1px solid #e9ecef;
-                ">
-                <h3>총점: {total}점</h3>
-                <h4>예상 등급: {score_to_grade(total)}등급</h4>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            if st.form_submit_button("점수 제출하기", type="primary", use_container_width=True):
+            if selected_grade:
                 # 결과 저장
-                correct_total = current_data['content_score'] + current_data['organization_score'] + current_data['expression_score']
+                is_correct = selected_grade == current_data['correct_grade']
                 result = {
                     'question': st.session_state.current_question,
-                    'content': content,
-                    'organization': organization,
-                    'expression': expression,
-                    'total': total,
-                    'correct_content': current_data['content_score'],
-                    'correct_organization': current_data['organization_score'],
-                    'correct_expression': current_data['expression_score'],
-                    'correct_total': correct_total,
+                    'selected': selected_grade,
+                    'correct': current_data['correct_grade'],
+                    'is_correct': is_correct,
                     'timestamp': datetime.now()
                 }
                 
                 # 중복 저장 방지
-                if not any(r['question'] == st.session_state.current_question for r in st.session_state.practice2_results):
-                    st.session_state.practice2_results.append(result)
+                if not any(r['question'] == st.session_state.current_question for r in st.session_state.practice1_results):
+                    st.session_state.practice1_results.append(result)
                 
                 # 피드백
-                show_score_feedback(result)
+                st.markdown("---")
+                if is_correct:
+                    st.success("🎉 정답입니다! 훌륭한 판단력을 보여주셨습니다.")
+                else:
+                    st.error(f"😔 아쉽지만 오답입니다. 정답: {current_data['correct_grade']}등급, 선택: {selected_grade}등급")
+                    
+                    # 피드백 이미지 표시
+                    feedback_path = f"data/g_feed/{st.session_state.current_question}.png"
+                    if os.path.exists(feedback_path):
+                        st.image(feedback_path, caption="상세 피드백")
                 
                 # 다음 문제로
                 st.markdown("---")
@@ -333,9 +293,129 @@ def show_practice2():
                             st.session_state.current_question += 1
                             st.rerun()
                     else:
-                        if st.button("결과 보기 →", type="primary", use_container_width=True):
-                            st.session_state.stage = 'results'
+                        if st.button("연습2로 이동 →", type="primary", use_container_width=True):
+                            st.session_state.stage = 'practice2'
+                            st.session_state.current_question = 1
                             st.rerun()
+        else:
+            st.error(f"연습1 데이터가 부족합니다. (현재: {len(grade_data)}개, 필요: 15개)")
+    else:
+        st.error("학생 글 데이터를 로드할 수 없습니다.")
+
+def show_practice2():
+    """연습2 - 점수 추정"""
+    st.title("📊 연습2: 글의 점수 추정하기")
+    
+    # 진행률
+    progress = (st.session_state.current_question - 1) / 15
+    st.progress(progress)
+    st.markdown(f"**진행 상황: {st.session_state.current_question}/15 문제**")
+    
+    # 현재 문제 데이터 가져오기
+    if 'student_data' in st.session_state and st.session_state.student_data:
+        # 연습2용 데이터만 필터링 (type이 'score'인 것)
+        score_data = [item for item in st.session_state.student_data if item.get('type') == 'score'][:15]
+        
+        if len(score_data) >= st.session_state.current_question:
+            current_data = score_data[st.session_state.current_question - 1]
+            
+            st.markdown("### 📖 학생 글")
+            st.markdown(f"""
+            <div style="
+                background-color: #f8f9fa;
+                padding: 2rem;
+                border-radius: 10px;
+                border-left: 5px solid #007bff;
+                margin: 1rem 0;
+                font-size: 1.1rem;
+                line-height: 1.6;
+            ">
+            <strong>문제 {st.session_state.current_question}번</strong><br><br>
+            {current_data['text']}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 점수 입력
+            st.markdown("### 🎯 영역별 점수를 입력하세요")
+            
+            with st.form(f"score_form_{st.session_state.current_question}"):
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.markdown("**내용 영역 (3-18점)**")
+                    st.caption("주제 적합성, 내용의 충실성, 독창성")
+                    content = st.number_input("내용 점수", min_value=3, max_value=18, value=10, label_visibility="collapsed")
+                
+                with col2:
+                    st.markdown("**조직 영역 (2-12점)**")
+                    st.caption("글의 구성, 단락 구성, 논리적 연결")
+                    organization = st.number_input("조직 점수", min_value=2, max_value=12, value=7, label_visibility="collapsed")
+                
+                with col3:
+                    st.markdown("**표현 영역 (2-12점)**")
+                    st.caption("어휘 사용, 문장 표현, 맞춤법")
+                    expression = st.number_input("표현 점수", min_value=2, max_value=12, value=7, label_visibility="collapsed")
+                
+                total = content + organization + expression
+                
+                # 총점 표시
+                st.markdown("---")
+                col_total1, col_total2, col_total3 = st.columns(3)
+                with col_total2:
+                    st.markdown(f"""
+                    <div style="
+                        background: white;
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        text-align: center;
+                        border: 1px solid #e9ecef;
+                    ">
+                    <h3>총점: {total}점</h3>
+                    <h4>예상 등급: {score_to_grade(total)}등급</h4>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                if st.form_submit_button("점수 제출하기", type="primary", use_container_width=True):
+                    # 결과 저장
+                    correct_total = current_data['content_score'] + current_data['organization_score'] + current_data['expression_score']
+                    result = {
+                        'question': st.session_state.current_question,
+                        'content': content,
+                        'organization': organization,
+                        'expression': expression,
+                        'total': total,
+                        'correct_content': current_data['content_score'],
+                        'correct_organization': current_data['organization_score'],
+                        'correct_expression': current_data['expression_score'],
+                        'correct_total': correct_total,
+                        'timestamp': datetime.now()
+                    }
+                    
+                    # 중복 저장 방지
+                    if not any(r['question'] == st.session_state.current_question for r in st.session_state.practice2_results):
+                        st.session_state.practice2_results.append(result)
+                    
+                    # 피드백
+                    show_score_feedback(result)
+                    
+                    # 다음 문제로
+                    st.markdown("---")
+                    col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
+                    
+                    with col_btn2:
+                        if st.session_state.current_question < 15:
+                            if st.button("다음 문제 →", type="primary", use_container_width=True):
+                                st.session_state.current_question += 1
+                                st.rerun()
+                        else:
+                            if st.button("결과 보기 →", type="primary", use_container_width=True):
+                                st.session_state.stage = 'results'
+                                st.rerun()
+        else:
+            st.error(f"연습2 데이터가 부족합니다. (현재: {len(score_data)}개, 필요: 15개)")
+    else:
+        st.error("학생 글 데이터를 로드할 수 없습니다.")
 
 def score_to_grade(total_score):
     """총점을 등급으로 변환"""
@@ -489,7 +569,7 @@ def show_results():
             st.session_state.practice1_results = []
             st.session_state.practice2_results = []
             st.session_state.start_time = datetime.now()
-            st.session_state.student_data = load_sample_data()
+            st.session_state.student_data = load_student_texts()
             st.rerun()
     
     with col_action3:
