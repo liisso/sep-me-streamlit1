@@ -7,6 +7,7 @@ from PIL import Image
 st.set_page_config(page_title="논설문 평가 연습", layout="wide")
 
 # --- 초기 세션 설정 ---
+import time
 for key in ["username", "mode", "submitted", "page", "current_text_grade", "current_text_score", "next_trigger"]:
     if key not in st.session_state:
         st.session_state[key] = None
@@ -33,7 +34,6 @@ def load_image_from_url(url):
         return BytesIO(r.content)
     return None
 
-@st.cache_data
 def load_texts_from_github(folder):
     base_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/{folder}/"
     api_url = f"https://api.github.com/repos/liisso/sep-me-streamlit1/contents/data/{folder}"
@@ -48,12 +48,90 @@ if st.session_state.next_trigger:
     st.experimental_rerun()
 
 # --- 화면 렌더링 ---
+
+# 결과 다운로드 기능
+import pandas as pd
+import io
+
+if (
+    (st.session_state.get("score_results") and st.session_state.get("current_text_score") and int(st.session_state.current_text_score[0]) == 15)
+    or
+    (st.session_state.get("grade_results") and st.session_state.get("current_text_grade") and int(st.session_state.current_text_grade[0]) == 15)
+):
+    df_score = pd.DataFrame(st.session_state.get("score_results", []))
+    df_grade = pd.DataFrame(st.session_state.get("grade_results", []))
+
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        if not df_score.empty:
+            df_score["총점 (정답)"] = df_score[["내용 점수 (정답)", "조직 점수 (정답)", "표현 점수 (정답)"]].sum(axis=1)
+            df_score["총점 (입력)"] = df_score[["내용 점수 (입력)", "조직 점수 (입력)", "표현 점수 (입력)"]].sum(axis=1)
+            df_score.to_excel(writer, index=False, sheet_name="점수 추정 결과")
+        if not df_grade.empty:
+            df_grade.to_excel(writer, index=False, sheet_name="등급 추정 결과")
+                writer.save()
+
+    # 시간 정보 계산
+    from datetime import timedelta
+
+def format_time(seconds):
+    if isinstance(seconds, (int, float)):
+        return str(timedelta(seconds=int(seconds)))
+    return "-"
+
+grade_time = "-"
+score_time = "-""-"
+    if st.session_state.get("grade_start_time"):
+        grade_time = format_time(time.time() - st.session_state.grade_start_time)
+    if st.session_state.get("score_start_time"):
+        score_time = format_time(time.time() - st.session_state.score_start_time)
+
+    # 시간 정보를 별 시트에 저장
+    summary_df = pd.DataFrame({
+        "사용자명": [st.session_state.username],
+        "등급 추정 소요 시간 (분:초)": [grade_time],
+        "점수 추정 소요 시간 (분:초)": [score_time]
+    })
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        summary_df.to_excel(writer, index=False, sheet_name="연습 시간 요약")
+        if not df_score.empty:
+            df_score["총점 (정답)"] = df_score[["내용 점수 (정답)", "조직 점수 (정답)", "표현 점수 (정답)"]].sum(axis=1)
+            df_score["총점 (입력)"] = df_score[["내용 점수 (입력)", "조직 점수 (입력)", "표현 점수 (입력)"]].sum(axis=1)
+            df_score.to_excel(writer, index=False, sheet_name="점수 추정 결과")
+        if not df_grade.empty:
+            df_grade.to_excel(writer, index=False, sheet_name="등급 추정 결과")
+        writer.save()
+
+    st.sidebar.download_button(
+        label="📥 연습 결과 다운로드 (Excel)",
+        data=buffer.getvalue(),
+        file_name=f"{st.session_state.username}_평가결과.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+# 결과 다운로드 기능
+if st.session_state.get("score_results"):
+    import pandas as pd
+    import io
+    df = pd.DataFrame(st.session_state.score_results)
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name="점수 추정 결과")
+        writer.save()
+    st.sidebar.download_button(
+        label="📥 점수 결과 다운로드 (Excel)",
+        data=buffer.getvalue(),
+        file_name=f"{st.session_state.username}_점수결과.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 if st.session_state.page == "intro":
     st.title("✍️ 논설문 평가 연습 프로그램 (SEP ME Web Edition)")
     st.header("1단계: 사용자 정보 입력")
     name = st.text_input("이름을 입력하세요")
     agree = st.checkbox("입력한 이름으로 연습 결과가 저장됨에 동의합니다")
     if name and agree and st.button("다음 단계로 진행"):
+    st.session_state.grade_start_time = None
+    st.session_state.score_start_time = None
         st.session_state.username = name
         st.session_state.page = "instructions"
 
@@ -84,6 +162,8 @@ elif st.session_state.page == "practice":
     st.session_state.mode = mode
 
     if mode == "등급 추정 연습":
+        if st.session_state.grade_start_time is None:
+            st.session_state.grade_start_time = time.time()
         st.subheader("🎯 [연습1] 학생 글의 등급 추정하기")
         texts = [txt for txt in load_texts_from_github("grade") if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
         existing_ids = sorted(int(txt[0].strip()) for txt in texts if 1 <= int(txt[0].strip()) <= 15)
@@ -111,6 +191,16 @@ elif st.session_state.page == "practice":
                 else:
                     st.warning(f"이미지를 불러올 수 없습니다: {url}")
 
+            # 등급 결과 저장
+            if "grade_results" not in st.session_state:
+                st.session_state.grade_results = []
+            st.session_state.grade_results.append({
+                "이름": st.session_state.username,
+                "문항 번호": text_id,
+                "등급 (정답)": correct_grade,
+                "등급 (입력)": user_grade
+            })
+
         if st.session_state.submitted and st.button("다음 문제로 이동", key="next_grade"):
             current_id = int(st.session_state.current_text_grade[0])
             next_text = next((txt for txt in sorted(texts, key=lambda x: int(x[0].strip())) if int(txt[0].strip()) == current_id + 1), None)
@@ -121,6 +211,8 @@ elif st.session_state.page == "practice":
                 st.warning("✅ 모든 문항을 완료했습니다. 처음부터 다시 시작하려면 '이전 화면으로 이동'을 누르세요.")
 
     elif mode == "점수 추정 연습":
+        if st.session_state.score_start_time is None:
+            st.session_state.score_start_time = time.time()
         st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
         texts = [txt for txt in load_texts_from_github("scre") if len(txt) >= 6 and txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
         existing_ids = sorted(int(txt[0].strip()) for txt in texts)
@@ -159,6 +251,21 @@ elif st.session_state.page == "practice":
                     st.image(img, caption="요소별 평가 해설")
                 else:
                     st.warning(f"이미지를 불러올 수 없습니다: {url}")
+
+        if st.session_state.submitted:
+            # 결과 저장
+            if "score_results" not in st.session_state:
+                st.session_state.score_results = []
+            st.session_state.score_results.append({
+                "이름": st.session_state.username,
+                "문항 번호": text_id,
+                "내용 점수 (정답)": a_c,
+                "내용 점수 (입력)": user_c,
+                "조직 점수 (정답)": a_o,
+                "조직 점수 (입력)": user_o,
+                "표현 점수 (정답)": a_e,
+                "표현 점수 (입력)": user_e,
+            })
 
         if st.session_state.submitted and st.button("다음 문제로 이동", key="next_score"):
             current_id = int(st.session_state.current_text_score[0])
