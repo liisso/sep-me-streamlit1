@@ -7,14 +7,14 @@ from PIL import Image
 st.set_page_config(page_title="논설문 평가 연습", layout="wide")
 st.title("✍️ 논설문 평가 연습 프로그램 (SEP ME Web Edition)")
 
-# 이미지 불러오기
+# 이미지 불러오기 함수
 def load_image_from_url(url):
     response = requests.get(url)
     if response.status_code == 200 and "image" in response.headers.get("Content-Type", ""):
         return BytesIO(response.content)
     return None
 
-# 텍스트 데이터 불러오기
+# 텍스트 데이터 불러오기 함수
 @st.cache_data
 def load_texts_from_github(folder):
     base_url = f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/{folder}/"
@@ -33,7 +33,7 @@ def load_texts_from_github(folder):
     except:
         return []
 
-# 학생 글 표시
+# 학생 글 표시 함수
 def render_student_text(text):
     st.markdown(
         f"""
@@ -78,7 +78,7 @@ with st.expander("🧠 문제 풀이 전 상위 인지 점검 리스트"):
     - ✅ 문장 **표현이 명확하고 오류가 없는가?**
     """)
 
-# [1] 등급 추정 연습
+# 등급 추정 연습
 if mode == "등급 추정 연습":
     st.subheader("🎯 [연습1] 학생 글의 등급 추정하기")
     texts = load_texts_from_github("grade")
@@ -110,12 +110,15 @@ if mode == "등급 추정 연습":
                     img_data = load_image_from_url(img_url)
                     if img_data:
                         st.image(img_data, caption="등급 평가 해설")
-        else:
+                    else:
+                        st.warning(f"이미지를 불러올 수 없습니다: {img_url}")
+
+        if st.session_state.submitted:
             if st.button("다음 문제로 이동", key="next_grade"):
                 st.session_state.current_text = random.choice(texts)
                 st.session_state.submitted = False
 
-# [2] 점수 추정 연습
+# 점수 추정 연습
 else:
     st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
     texts = load_texts_from_github("score")
@@ -179,7 +182,10 @@ else:
                     img_data = load_image_from_url(img_url)
                     if img_data:
                         st.image(img_data, caption="요소별 평가 해설")
-        else:
+                    else:
+                        st.warning(f"이미지를 불러올 수 없습니다: {img_url}")
+
+        if st.session_state.submitted:
             if st.button("다음 문제로 이동", key="next_score"):
                 st.session_state.current_text = random.choice(texts)
                 st.session_state.submitted = False
