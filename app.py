@@ -69,7 +69,8 @@ def main():
         3: show_metacognition_checklist,
         4: run_grade_practice,
         5: run_score_practice,
-        6: show_summary_result
+        6: show_summary_result,
+        7: show_mode_complete  # 새 단계 추가
     }
     steps[st.session_state.step]()
 
@@ -150,7 +151,8 @@ def run_grade_practice():
     idx = st.session_state.grade_index
     total = st.session_state.num_questions
     if idx >= total:
-        st.session_state.step = 5 if st.session_state.mode == "both" else 6
+        st.session_state.completed_mode = "grade"
+        st.session_state.step = 7
         return
 
     lines = load_txt_from_url(st.session_state.grade_urls[idx])
@@ -218,7 +220,8 @@ def run_score_practice():
     idx = st.session_state.score_index
     total = st.session_state.num_questions
     if idx >= total:
-        st.session_state.step = 6
+        st.session_state.completed_mode = "score"
+        st.session_state.step = 7
         return
 
     lines = load_txt_from_url(st.session_state.score_urls[idx])
@@ -279,6 +282,29 @@ def run_score_practice():
             st.session_state.score_index += 1
             st.session_state.score_submitted = False
             return
+
+# --- 화면 7: 연습 완료 후 모드 선택 화면 ---
+def show_mode_complete():
+    mode = st.session_state.get("completed_mode", "")
+    if mode == "grade":
+        st.success("등급 추정 연습이 모두 끝났습니다.")
+    elif mode == "score":
+        st.success("점수 추정 연습이 모두 끝났습니다.")
+    else:
+        st.success("연습이 모두 끝났습니다.")
+
+    if st.button("다른 연습 모드 선택하러 가기"):
+        # 초기화해서 재연습 가능하게 하면 좋음
+        st.session_state.step = 2
+        st.session_state.submitted = False
+        st.session_state.score_submitted = False
+        st.session_state.grade_index = 0
+        st.session_state.score_index = 0
+        st.session_state.grade_urls = []
+        st.session_state.score_urls = []
+        st.session_state.grade_results = []
+        st.session_state.score_results = []
+        st.session_state.completed_mode = ""
 
 # --- 화면 6: 결과 ---
 def show_summary_result():
