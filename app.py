@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
+import glob
 from datetime import datetime
 
 # 페이지 설정
@@ -21,145 +22,154 @@ def initialize_session_state():
         st.session_state.practice1_results = []
         st.session_state.practice2_results = []
         st.session_state.start_time = datetime.now()
+        st.session_state.student_data = None
 
 def load_student_texts():
-    """올바른 파일 구조에 맞게 데이터 로드"""
+    """glob 패턴 매칭과 기존 파싱 로직을 정확히 적용"""
     samples = []
     
-    st.info("📁 올바른 구조로 학생 글 데이터를 로딩합니다...")
+    st.info("📁 glob 패턴으로 실제 txt 파일들을 자동 감지합니다...")
     
-    # grade 폴더의 모든 txt 파일 처리
     try:
-        if os.path.exists("data/grade"):
-            grade_files = [f for f in os.listdir("data/grade") if f.endswith('.txt')]
-            st.write(f"📚 grade 폴더 파일들: {grade_files}")
-            
-            for filename in grade_files:
-                try:
-                    file_path = f"data/grade/{filename}"
-                    
-                    # 파일 읽기
+        # grade 폴더의 모든 txt 파일을 glob으로 찾기
+        grade_pattern = "data/grade/*.txt"
+        grade_files = glob.glob(grade_pattern)
+        grade_files.sort()  # 파일명 순으로 정렬
+        
+        st.write(f"🔍 grade 폴더에서 발견된 파일들: {[os.path.basename(f) for f in grade_files]}")
+        
+        # 연습1용 데이터 로드 (기존 파싱 로직 완전 적용)
+        grade_count = 0
+        for i, file_path in enumerate(grade_files[:15], 1):  # 최대 15개
+            try:
+                # 다중 인코딩 시도
+                content = None
+                for encoding in ['utf-8', 'cp949', 'euc-kr']:
                     try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            lines = f.readlines()
+                        with open(file_path, 'r', encoding=encoding) as f:
+                            lines = f.readlines()  # 기존 방식: readlines() 사용
+                        content = lines
+                        break
                     except UnicodeDecodeError:
-                        with open(file_path, 'r', encoding='cp949') as f:
-                            lines = f.readlines()
-                    
-                    if len(lines) >= 6:
-                        # 올바른 구조로 파싱
-                        question_num = int(lines[0].strip())  # 1행: 문제 번호
-                        correct_grade = int(lines[1].strip())  # 2행: 등급 정답
+                        continue
+                
+                if content is None:
+                    st.warning(f"⚠️ {os.path.basename(file_path)}: 모든 인코딩 시도 실패")
+                    continue
+                
+                # 기존 파싱 로직 완전 복원
+                if len(lines) >= 6:  # 최소 6줄 이상이어야 함
+                    try:
+                        file_id = int(lines[0].strip())  # 1행: 글 번호 (피드백 이미지용)
+                        correct_grade = int(lines[1].strip())  # 2행: 등급
                         content_score = int(lines[2].strip())  # 3행: 내용 점수
                         organization_score = int(lines[3].strip())  # 4행: 조직 점수
                         expression_score = int(lines[4].strip())  # 5행: 표현 점수
                         
-                        # 6행부터 끝까지: 학생 글
-                        student_text = ''.join(lines[5:]).strip()
+                        # 실제 학생 글 내용 (6행부터) - 기존 방식
+                        student_text = ''.join(lines[5:]).strip()  # 기존 방식: join 사용
                         
-                        if student_text:
+                        if student_text and len(student_text) > 10:  # 최소 길이 확인
                             samples.append({
-                                'question_num': question_num,
+                                'id': i,
+                                'file_id': file_id,  # 피드백 이미지 매칭용
                                 'text': student_text,
                                 'correct_grade': correct_grade,
                                 'content_score': content_score,
                                 'organization_score': organization_score,
                                 'expression_score': expression_score,
                                 'type': 'grade',
-                                'filename': filename
+                                'filename': os.path.basename(file_path)
                             })
-                            st.success(f"✅ {filename} 로드 성공 (문제 {question_num}번)")
-                        
-                except Exception as e:
-                    st.warning(f"❌ {filename} 오류: {e}")
+                            grade_count += 1
+                            st.success(f"✅ {os.path.basename(file_path)} 로드 성공 (글번호: {file_id})")
+                        else:
+                            st.warning(f"⚠️ {os.path.basename(file_path)}: 학생 글 내용이 없습니다.")
+                    except ValueError as e:
+                        st.warning(f"⚠️ {os.path.basename(file_path)}: 점수 형식 오류 - {e}")
+                else:
+                    st.warning(f"⚠️ {os.path.basename(file_path)}: 파일 형식 오류 (줄 수: {len(lines)})")
+                    
+            except Exception as e:
+                st.warning(f"⚠️ {os.path.basename(file_path)} 처리 오류: {e}")
         
-        # score 폴더의 모든 txt 파일 처리
-        if os.path.exists("data/score"):
-            score_files = [f for f in os.listdir("data/score") if f.endswith('.txt')]
-            st.write(f"📊 score 폴더 파일들: {score_files}")
-            
-            for filename in score_files:
-                try:
-                    file_path = f"data/score/{filename}"
-                    
+        st.info(f"📚 연습1 (grade): {grade_count}개 파일 로드 완료")
+        
+        # score 폴더의 모든 txt 파일을 glob으로 찾기
+        score_pattern = "data/score/*.txt"
+        score_files = glob.glob(score_pattern)
+        score_files.sort()  # 파일명 순으로 정렬
+        
+        st.write(f"🔍 score 폴더에서 발견된 파일들: {[os.path.basename(f) for f in score_files]}")
+        
+        # 연습2용 데이터 로드 (기존 파싱 로직 완전 적용)
+        score_count = 0
+        for i, file_path in enumerate(score_files[:15], 1):  # 최대 15개
+            try:
+                # 다중 인코딩 시도
+                content = None
+                for encoding in ['utf-8', 'cp949', 'euc-kr']:
                     try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            lines = f.readlines()
+                        with open(file_path, 'r', encoding=encoding) as f:
+                            lines = f.readlines()  # 기존 방식: readlines() 사용
+                        content = lines
+                        break
                     except UnicodeDecodeError:
-                        with open(file_path, 'r', encoding='cp949') as f:
-                            lines = f.readlines()
-                    
-                    if len(lines) >= 6:
-                        question_num = int(lines[0].strip())
-                        correct_grade = int(lines[1].strip())
-                        content_score = int(lines[2].strip())
-                        organization_score = int(lines[3].strip())
-                        expression_score = int(lines[4].strip())
-                        student_text = ''.join(lines[5:]).strip()
+                        continue
+                
+                if content is None:
+                    st.warning(f"⚠️ {os.path.basename(file_path)}: 모든 인코딩 시도 실패")
+                    continue
+                
+                # 기존 파싱 로직 완전 복원
+                if len(lines) >= 6:  # 최소 6줄 이상이어야 함
+                    try:
+                        file_id = int(lines[0].strip())  # 1행: 글 번호 (피드백 이미지용)
+                        correct_grade = int(lines[1].strip())  # 2행: 등급
+                        content_score = int(lines[2].strip())  # 3행: 내용 점수
+                        organization_score = int(lines[3].strip())  # 4행: 조직 점수
+                        expression_score = int(lines[4].strip())  # 5행: 표현 점수
                         
-                        if student_text:
+                        # 실제 학생 글 내용 (6행부터) - 기존 방식
+                        student_text = ''.join(lines[5:]).strip()  # 기존 방식: join 사용
+                        
+                        if student_text and len(student_text) > 10:  # 최소 길이 확인
                             samples.append({
-                                'question_num': question_num,
+                                'id': i + 15,
+                                'file_id': file_id,  # 피드백 이미지 매칭용
                                 'text': student_text,
                                 'correct_grade': correct_grade,
                                 'content_score': content_score,
                                 'organization_score': organization_score,
                                 'expression_score': expression_score,
                                 'type': 'score',
-                                'filename': filename
+                                'filename': os.path.basename(file_path)
                             })
-                            st.success(f"✅ {filename} 로드 성공 (문제 {question_num}번)")
-                        
-                except Exception as e:
-                    st.warning(f"❌ {filename} 오류: {e}")
+                            score_count += 1
+                            st.success(f"✅ {os.path.basename(file_path)} 로드 성공 (글번호: {file_id})")
+                        else:
+                            st.warning(f"⚠️ {os.path.basename(file_path)}: 학생 글 내용이 없습니다.")
+                    except ValueError as e:
+                        st.warning(f"⚠️ {os.path.basename(file_path)}: 점수 형식 오류 - {e}")
+                else:
+                    st.warning(f"⚠️ {os.path.basename(file_path)}: 파일 형식 오류 (줄 수: {len(lines)})")
+                    
+            except Exception as e:
+                st.warning(f"⚠️ {os.path.basename(file_path)} 처리 오류: {e}")
         
-        if samples:
-            # 문제 번호 순으로 정렬
-            samples.sort(key=lambda x: (x['type'], x['question_num']))
-            st.success(f"🎉 총 {len(samples)}개 파일 로드 완료!")
+        st.info(f"📊 연습2 (score): {score_count}개 파일 로드 완료")
+        
+        # 결과 반환
+        if len(samples) > 0:
+            st.success(f"🎉 glob 패턴으로 총 {len(samples)}개 파일 로드 성공!")
             return samples
         else:
-            st.error("❌ 파일을 찾을 수 없습니다. 샘플 데이터를 사용합니다.")
-            return generate_sample_data()
+            st.error("❌ 사용 가능한 txt 파일이 없습니다.")
+            return []
             
     except Exception as e:
-        st.error(f"❌ 폴더 접근 오류: {e}")
-        return generate_sample_data()
-
-def generate_sample_data():
-    """샘플 데이터 생성"""
-    samples = []
-    
-    sample_text = """인간이 사용할 약이나 화장품 등이 인간에게 해를 끼치지 않는지를 알아보기 위해 대부분의 회사나 공공 기관들이 동물 실험을 한다. 하지만 본래 인간과 동물은 다르기 때문에 인간과 동물에게서 나타나는 효과가 다르다. <자료>를 보면 '독일의 입덧 방지약에 들어있던 탈리도마이드라는 물질은 쥐나 개, 고양이에 대한 동물 실험에서 아무런 부작용을 일으키지 않았지만 정작 원숭이와 사람에게는 팔이나 다리뼈가 발달하지 않거나 극단적으로 짧은 기형아를 발생시켰다.'라는 내용을 통해 동물 실험의 결과와 인간에게서 나타나는 결과가 다르다는 것을 알 수 있다."""
-    
-    # 연습1용 샘플 데이터
-    for i in range(1, 16):
-        samples.append({
-            'question_num': i,
-            'text': sample_text + f" (연습1 문제 {i}번)",
-            'correct_grade': 3,
-            'content_score': 12,
-            'organization_score': 8,
-            'expression_score': 7,
-            'type': 'grade',
-            'filename': f'sample_{i}.txt'
-        })
-    
-    # 연습2용 샘플 데이터
-    for i in range(1, 16):
-        samples.append({
-            'question_num': i,
-            'text': sample_text + f" (연습2 문제 {i}번)",
-            'correct_grade': 3,
-            'content_score': 12,
-            'organization_score': 8,
-            'expression_score': 7,
-            'type': 'score',
-            'filename': f'sample_score_{i}.txt'
-        })
-    
-    st.success(f"✅ 샘플 데이터 생성 완료: {len(samples)}개")
-    return samples
+        st.error(f"❌ 파일 로딩 중 오류 발생: {e}")
+        return []
 
 def show_intro_page():
     """소개 페이지"""
@@ -363,7 +373,9 @@ def show_practice1():
         grade_data = [item for item in st.session_state.student_data if item.get('type') == 'grade']
         
         if len(grade_data) >= st.session_state.current_question:
-            current_data = grade_data[st.session_state.current_question - 1]
+            # 현재 문제 인덱스 (0부터 시작)
+            current_index = st.session_state.current_question - 1
+            current_data = grade_data[current_index]
             
             st.markdown("### 📖 학생 글")
             st.markdown(f"""
@@ -377,7 +389,7 @@ def show_practice1():
                 line-height: 1.6;
                 white-space: pre-wrap;
             ">
-            <strong>문제 {st.session_state.current_question}번</strong> (원본 문제번호: {current_data['question_num']})<br><br>
+            <strong>문제 {st.session_state.current_question}번</strong> (파일: {current_data.get('filename', 'unknown')})<br><br>
             {current_data['text']}
             </div>
             """, unsafe_allow_html=True)
@@ -406,7 +418,6 @@ def show_practice1():
                 is_correct = selected_grade == current_data['correct_grade']
                 result = {
                     'question': st.session_state.current_question,
-                    'question_num': current_data['question_num'],
                     'selected': selected_grade,
                     'correct': current_data['correct_grade'],
                     'is_correct': is_correct,
@@ -424,10 +435,10 @@ def show_practice1():
                 else:
                     st.error(f"😔 아쉽지만 오답입니다. 정답: {current_data['correct_grade']}등급, 선택: {selected_grade}등급")
                     
-                    # 피드백 이미지 표시 (문제 번호 기반)
+                    # 피드백 이미지 표시 (file_id 기반)
                     feedback_paths = [
-                        f"data/g_feed/{current_data['question_num']}.png",
-                        f"data/f_grade/{current_data['question_num']}.png"
+                        f"data/f_grade/{current_data['file_id']}.png",
+                        f"data/g_feed/{current_data['file_id']}.png"
                     ]
                     
                     for feedback_path in feedback_paths:
@@ -456,6 +467,7 @@ def show_practice1():
                                 st.session_state.stage = 'results'
                                 st.rerun()
                         else:
+                            # 기본값: 연습2로 이동
                             if st.button("연습2로 이동 →", type="primary", use_container_width=True):
                                 st.session_state.stage = 'practice2'
                                 st.session_state.current_question = 1
@@ -480,7 +492,9 @@ def show_practice2():
         score_data = [item for item in st.session_state.student_data if item.get('type') == 'score']
         
         if len(score_data) >= st.session_state.current_question:
-            current_data = score_data[st.session_state.current_question - 1]
+            # 현재 문제 인덱스 (0부터 시작)
+            current_index = st.session_state.current_question - 1
+            current_data = score_data[current_index]
             
             st.markdown("### 📖 학생 글")
             st.markdown(f"""
@@ -494,7 +508,7 @@ def show_practice2():
                 line-height: 1.6;
                 white-space: pre-wrap;
             ">
-            <strong>문제 {st.session_state.current_question}번</strong> (원본 문제번호: {current_data['question_num']})<br><br>
+            <strong>문제 {st.session_state.current_question}번</strong> (파일: {current_data.get('filename', 'unknown')})<br><br>
             {current_data['text']}
             </div>
             """, unsafe_allow_html=True)
@@ -545,7 +559,6 @@ def show_practice2():
                     correct_total = current_data['content_score'] + current_data['organization_score'] + current_data['expression_score']
                     result = {
                         'question': st.session_state.current_question,
-                        'question_num': current_data['question_num'],
                         'content': content,
                         'organization': organization,
                         'expression': expression,
@@ -562,7 +575,7 @@ def show_practice2():
                         st.session_state.practice2_results.append(result)
                     
                     # 피드백
-                    show_score_feedback(result, current_data['question_num'])
+                    show_score_feedback(result, current_data['file_id'])
                     
                     # 다음 문제로
                     st.markdown("---")
@@ -595,7 +608,7 @@ def score_to_grade(total_score):
     else:
         return 5
 
-def show_score_feedback(result, question_num):
+def show_score_feedback(result, file_id):
     """점수 피드백 표시"""
     content_diff = result['content'] - result['correct_content']
     org_diff = result['organization'] - result['correct_organization']
@@ -648,10 +661,10 @@ def show_score_feedback(result, question_num):
     else:
         st.warning("💡 채점 기준을 다시 검토해보세요. 각 영역별 특성을 더 자세히 살펴보시기 바랍니다.")
     
-    # 피드백 이미지 표시 (문제 번호 기반)
+    # 피드백 이미지 표시 (file_id 기반)
     feedback_paths = [
-        f"data/s_feed/{question_num}.png",
-        f"data/f_score/{question_num}.png"
+        f"data/f_score/{file_id}.png",
+        f"data/s_feed/{file_id}.png"
     ]
     
     for feedback_path in feedback_paths:
@@ -674,7 +687,7 @@ def show_results():
     elif st.session_state.selected_practice == 'practice2':
         st.info("📊 연습2 (점수 추정) 결과만 표시됩니다.")
     else:
-        st.info("🎯 완료한 연습 결과를 표시합니다.")
+        st.info("🎯 두 연습 모두 완료하셨습니다!")
     
     # 결과 요약
     st.markdown("### 📊 종합 결과")
@@ -739,14 +752,14 @@ def show_results():
         st.markdown(f"### {tabs[0]}")
         if st.session_state.practice1_results:
             results_df = pd.DataFrame(st.session_state.practice1_results)
-            display_df = results_df[['question', 'question_num', 'selected', 'correct', 'is_correct']].copy()
-            display_df.columns = ['순서', '문제번호', '선택등급', '정답등급', '정답여부']
+            display_df = results_df[['question', 'selected', 'correct', 'is_correct']].copy()
+            display_df.columns = ['문제번호', '선택등급', '정답등급', '정답여부']
             display_df['정답여부'] = display_df['정답여부'].map({True: '✅', False: '❌'})
             st.dataframe(display_df, use_container_width=True)
         else:
             results_df = pd.DataFrame(st.session_state.practice2_results)
-            display_df = results_df[['question', 'question_num', 'content', 'organization', 'expression', 'total', 'correct_total']].copy()
-            display_df.columns = ['순서', '문제번호', '내용점수', '조직점수', '표현점수', '총점', '정답총점']
+            display_df = results_df[['question', 'content', 'organization', 'expression', 'total', 'correct_total']].copy()
+            display_df.columns = ['문제번호', '내용점수', '조직점수', '표현점수', '총점', '정답총점']
             display_df['점수차이'] = display_df['총점'] - display_df['정답총점']
             st.dataframe(display_df, use_container_width=True)
     else:
@@ -756,16 +769,16 @@ def show_results():
         with tab1:
             if st.session_state.practice1_results:
                 results_df = pd.DataFrame(st.session_state.practice1_results)
-                display_df = results_df[['question', 'question_num', 'selected', 'correct', 'is_correct']].copy()
-                display_df.columns = ['순서', '문제번호', '선택등급', '정답등급', '정답여부']
+                display_df = results_df[['question', 'selected', 'correct', 'is_correct']].copy()
+                display_df.columns = ['문제번호', '선택등급', '정답등급', '정답여부']
                 display_df['정답여부'] = display_df['정답여부'].map({True: '✅', False: '❌'})
                 st.dataframe(display_df, use_container_width=True)
         
         with tab2:
             if st.session_state.practice2_results:
                 results_df = pd.DataFrame(st.session_state.practice2_results)
-                display_df = results_df[['question', 'question_num', 'content', 'organization', 'expression', 'total', 'correct_total']].copy()
-                display_df.columns = ['순서', '문제번호', '내용점수', '조직점수', '표현점수', '총점', '정답총점']
+                display_df = results_df[['question', 'content', 'organization', 'expression', 'total', 'correct_total']].copy()
+                display_df.columns = ['문제번호', '내용점수', '조직점수', '표현점수', '총점', '정답총점']
                 display_df['점수차이'] = display_df['총점'] - display_df['정답총점']
                 st.dataframe(display_df, use_container_width=True)
     
@@ -789,6 +802,7 @@ def show_results():
         if st.button("🔄 다른 연습 하기", use_container_width=True):
             st.session_state.stage = 'practice_selection'
             st.session_state.current_question = 1
+            # 기존 결과는 유지하고 새로운 연습만 시작
             st.rerun()
     
     with col_action3:
@@ -824,48 +838,6 @@ def create_results_csv():
 def main():
     # 세션 상태 초기화
     initialize_session_state()
-
-       # 디렉토리 확인용 코드 삽입
-# main() 함수 시작 부분에 추가
-import os
-import glob
-
-st.write("📁 파일 구조 진단:")
-
-# 1. data 폴더 확인
-if os.path.exists("data"):
-    st.success("✅ data 폴더 존재")
-    data_contents = os.listdir("data")
-    st.write("data 폴더 내용:", data_contents)
-    
-    # 2. grade 폴더 확인
-    if os.path.exists("data/grade"):
-        grade_files = [f for f in os.listdir("data/grade") if f.endswith('.txt')]
-        st.success(f"✅ grade 폴더: {len(grade_files)}개 txt 파일")
-        st.write("grade 파일들:", grade_files[:5])
-        
-        # 첫 번째 파일 내용 확인
-        if grade_files:
-            with open(f"data/grade/{grade_files[0]}", 'r', encoding='utf-8') as f:
-                sample_content = f.read()
-            st.write(f"**{grade_files[0]} 내용 미리보기:**")
-            st.code(sample_content[:200])
-    else:
-        st.error("❌ data/grade 폴더 없음")
-    
-    # 3. score 폴더 확인
-    if os.path.exists("data/score"):
-        score_files = [f for f in os.listdir("data/score") if f.endswith('.txt')]
-        st.success(f"✅ score 폴더: {len(score_files)}개 txt 파일")
-    else:
-        st.error("❌ data/score 폴더 없음")
-        
-else:
-    st.error("❌ data 폴더 없음")
-    # 전체에서 txt 파일 찾기
-    all_txt = glob.glob("**/*.txt", recursive=True)
-    st.write("전체 txt 파일들:", all_txt[:10])
-
     
     # 사이드바
     st.sidebar.title("📊 진행 현황")
