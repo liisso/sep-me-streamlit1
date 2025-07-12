@@ -193,7 +193,7 @@ def show_practice1():
             with cols[i]:
                 if st.button(f"{grade}등급", key=f"grade_{grade}_{q}"):
                     selected_grade = grade
-        if selected_grade:
+        if selected_grade is not None:
             is_correct = selected_grade == current_data['correct_grade']
             st.write(f"정답: {current_data['correct_grade']}등급, 선택: {selected_grade}등급")
             if not is_correct:
@@ -207,8 +207,9 @@ def show_practice1():
                     st.session_state.current_question += 1
                     st.rerun()
             else:
-                if st.button("결과 보기 →"):
-                    st.session_state.stage = 'results'
+                if st.button("연습2로 이동 →"):
+                    st.session_state.stage = 'practice2'
+                    st.session_state.current_question = 1
                     st.rerun()
     else:
         st.error("연습1 데이터가 부족합니다.")
@@ -252,10 +253,24 @@ def show_results():
     st.title("🎉 학습 완료!")
     st.balloons()
     st.success(f"{st.session_state.user_name}님, 연습을 완료하셨습니다!")
-    st.button("처음으로", on_click=lambda: [st.session_state.clear(), st.rerun()])
+    if st.button("처음으로"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
 
 def main():
     initialize_session_state()
+    st.sidebar.title("📊 진행 현황")
+    if st.session_state.user_name:
+        st.sidebar.success(f"👋 {st.session_state.user_name}님")
+        if st.session_state.selected_practice:
+            st.sidebar.info(f"선택한 연습: {st.session_state.selected_practice}")
+        elapsed = datetime.now() - st.session_state.start_time
+        st.sidebar.metric("⏱️ 경과 시간", f"{elapsed.seconds // 60}분 {elapsed.seconds % 60}초")
+    if st.sidebar.button("🔄 처음부터 다시 시작"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
     if st.session_state.stage == 'intro':
         show_intro_page()
     elif st.session_state.stage == 'assignment_info':
