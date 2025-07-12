@@ -3,11 +3,14 @@ import random
 import requests
 from io import BytesIO
 from PIL import Image
+import pandas as pd
+import io
+from datetime import timedelta
+import time
 
 st.set_page_config(page_title="논설문 평가 연습", layout="wide")
 
 # --- 초기 세션 설정 ---
-import time
 for key in ["username", "mode", "submitted", "page", "current_text_grade", "current_text_score", "next_trigger"]:
     if key not in st.session_state:
         st.session_state[key] = None
@@ -47,14 +50,7 @@ if st.session_state.next_trigger:
     st.session_state.next_trigger = False
     st.experimental_rerun()
 
-# --- 화면 렌더링 ---
-
-# 결과 다운로드 기능
-import pandas as pd
-import io
-
-from datetime import timedelta
-
+# --- 결과 다운로드 ---
 def format_time(seconds):
     if isinstance(seconds, (int, float)):
         return str(timedelta(seconds=int(seconds)))
@@ -96,22 +92,15 @@ if (
         file_name=f"{st.session_state.username}_평가결과.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-
-    st.sidebar.download_button(
-        label="📥 점수 결과 다운로드 (Excel)",
-        data=buffer.getvalue(),
-        file_name=f"{st.session_state.username}_점수결과.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+# --- 화면 렌더링 ---
 if st.session_state.page == "intro":
     st.title("✍️ 논설문 평가 연습 프로그램 (SEP ME Web Edition)")
     st.header("1단계: 사용자 정보 입력")
     name = st.text_input("이름을 입력하세요")
     agree = st.checkbox("입력한 이름으로 연습 결과가 저장됨에 동의합니다")
     if name and agree and st.button("다음 단계로 진행"):
-    st.session_state.username = name
-    st.session_state.page = "instructions"
+        st.session_state.username = name
+        st.session_state.page = "instructions"
 
 elif st.session_state.page == "instructions":
     st.title("📌 연습 안내 및 과제 확인")
@@ -138,16 +127,17 @@ elif st.session_state.page == "practice":
 
     mode = st.radio("연습 모드를 선택하세요", ["등급 추정 연습", "점수 추정 연습"])
     st.session_state.mode = mode
-
     if mode == "등급 추정 연습":
         if st.session_state.grade_start_time is None:
             st.session_state.grade_start_time = time.time()
+
         st.subheader("🎯 [연습1] 학생 글의 등급 추정하기")
         texts = [txt for txt in load_texts_from_github("grade") if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
-        existing_ids = sorted(int(txt[0].strip()) for txt in texts if 1 <= int(txt[0].strip()) <= 15)
+        existing_ids = sorted(int(txt[0].strip()) for txt in texts)
         st.sidebar.write(f"📂 불러온 문항 번호: {existing_ids}")
+
         if not st.session_state.current_text_grade:
-            st.session_state.current_text_grade = next((txt for txt in sorted(texts, key=lambda x: int(x[0])) if int(txt[0]) == 1), None)
+            st.session_state.current_text_grade = next((txt for txt in sorted(texts, key=lambda x: int(x[0])) if int(x[0]) == 1), None)
         sel = st.session_state.current_text_grade
         text_id, correct_grade, student_text = sel[0], int(sel[1]), "\n".join(sel[5:])
 
@@ -156,8 +146,6 @@ elif st.session_state.page == "practice":
         user_grade = st.radio("예상 등급을 선택하세요", [1, 2, 3, 4, 5], horizontal=True)
 
         if st.button("제출", key="submit_grade"):
-        # 결과 저장 기능 (추후 확장 가능)
-        # st.session_state.result_log.append({...})
             st.session_state.submitted = True
             if user_grade == correct_grade:
                 st.success("✅ 정답입니다!")
@@ -169,7 +157,7 @@ elif st.session_state.page == "practice":
                 else:
                     st.warning(f"이미지를 불러올 수 없습니다: {url}")
 
-            # 등급 결과 저장
+            # 결과 저장
             if "grade_results" not in st.session_state:
                 st.session_state.grade_results = []
             st.session_state.grade_results.append({
@@ -187,14 +175,15 @@ elif st.session_state.page == "practice":
                 st.session_state.submitted = False
             else:
                 st.warning("✅ 모든 문항을 완료했습니다. 처음부터 다시 시작하려면 '이전 화면으로 이동'을 누르세요.")
-
     elif mode == "점수 추정 연습":
         if st.session_state.score_start_time is None:
             st.session_state.score_start_time = time.time()
+
         st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
         texts = [txt for txt in load_texts_from_github("scre") if len(txt) >= 6 and txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
         existing_ids = sorted(int(txt[0].strip()) for txt in texts)
         st.sidebar.write(f"📂 불러온 문항 번호: {existing_ids}")
+
         if not st.session_state.current_text_score:
             st.session_state.current_text_score = next((txt for txt in sorted(texts, key=lambda x: int(x[0].strip())) if int(txt[0].strip()) == 1), None)
         sel = st.session_state.current_text_score
@@ -205,13 +194,14 @@ elif st.session_state.page == "practice":
         st.markdown(f"<div style='background:white; color:black; padding:1rem; border-radius:6px; border:1px solid #ccc;'>{student_text}</div>", unsafe_allow_html=True)
 
         col1, col2, col3 = st.columns(3)
-        with col1: user_c = st.number_input("내용 점수 (3~18)", min_value=3, max_value=18, step=1)
-        with col2: user_o = st.number_input("조직 점수 (2~12)", min_value=2, max_value=12, step=1)
-        with col3: user_e = st.number_input("표현 점수 (2~12)", min_value=2, max_value=12, step=1)
+        with col1:
+            user_c = st.number_input("내용 점수 (3~18)", min_value=3, max_value=18, step=1)
+        with col2:
+            user_o = st.number_input("조직 점수 (2~12)", min_value=2, max_value=12, step=1)
+        with col3:
+            user_e = st.number_input("표현 점수 (2~12)", min_value=2, max_value=12, step=1)
 
         if st.button("제출", key="submit_score"):
-        # 결과 저장 기능 (추후 확장 가능)
-        # st.session_state.result_log.append({...})
             st.session_state.submitted = True
             msgs = []
             for label, user, ans in [("내용", user_c, a_c), ("조직", user_o, a_o), ("표현", user_e, a_e)]:
@@ -219,7 +209,9 @@ elif st.session_state.page == "practice":
                     msgs.append(f"✅ {label} 점수: 정답")
                 else:
                     msgs.append(f"❌ {label} 점수: 오답")
-            for m in msgs: st.write(m)
+            for m in msgs:
+                st.write(m)
+
             if all("정답" in m for m in msgs):
                 st.success("🎉 모든 점수를 정확히 맞추셨습니다!")
             else:
@@ -230,7 +222,6 @@ elif st.session_state.page == "practice":
                 else:
                     st.warning(f"이미지를 불러올 수 없습니다: {url}")
 
-        if st.session_state.submitted:
             # 결과 저장
             if "score_results" not in st.session_state:
                 st.session_state.score_results = []
@@ -247,7 +238,7 @@ elif st.session_state.page == "practice":
 
         if st.session_state.submitted and st.button("다음 문제로 이동", key="next_score"):
             current_id = int(st.session_state.current_text_score[0])
-            next_text = next((txt for txt in sorted(texts, key=lambda x: int(x[0].strip())) if txt[0].strip().isdigit() and int(txt[0].strip()) == current_id + 1), None)
+            next_text = next((txt for txt in sorted(texts, key=lambda x: int(x[0].strip())) if int(txt[0].strip()) == current_id + 1), None)
             if next_text:
                 st.session_state.current_text_score = next_text
                 st.session_state.submitted = False
