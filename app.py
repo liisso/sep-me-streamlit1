@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import os
 import glob
 from datetime import datetime
@@ -16,6 +15,8 @@ def initialize_session_state():
         st.session_state.practice1_results = []
         st.session_state.practice2_results = []
         st.session_state.start_time = datetime.now()
+        st.session_state.student_data = None
+        st.session_state.checklist = [False] * 7
 
 def load_student_texts():
     samples = []
@@ -92,6 +93,8 @@ def load_student_texts():
         except Exception:
             continue
     if samples:
+        # 문제 번호 순 정렬
+        samples = sorted(samples, key=lambda x: (x['type'], x['file_id']))
         return samples
     else:
         return generate_fallback_data()
@@ -152,8 +155,20 @@ def show_assignment_info():
             st.image("data/standard.png", caption="평가 기준")
     with st.form("checklist"):
         st.markdown("**상위 인지 요소 점검**")
-        checks = [st.checkbox(f"{i+1}. 체크리스트 항목") for i in range(7)]
+        checklist_labels = [
+            "1. 학생 글을 평가하는 목적을 설정하고 평가 전략을 세웠다.",
+            "2. 쓰기 과제 및 평가 기준을 확인하고 변별 방법을 점검했다.",
+            "3. 평가 기준을 고려하여 예시문의 특징을 정확히 파악했다.",
+            "4. 평가 기준에 적합한 학생 글의 예를 머릿속으로 떠올렸다.",
+            "5. 학생 글을 일관되게 평가할 것을 다짐했다.",
+            "6. 학생 글을 공정하고 객관적으로 평가할 것을 다짐했다.",
+            "7. 평가 과정과 결과를 반성적으로 점검할 것을 다짐했다."
+        ]
+        checks = []
+        for i, label in enumerate(checklist_labels):
+            checks.append(st.checkbox(label, value=st.session_state.checklist[i], key=f"checklist_{i}"))
         if st.form_submit_button("다음 단계로 →", type="primary"):
+            st.session_state.checklist = checks.copy()
             if all(checks):
                 st.session_state.stage = 'practice_selection'
                 st.session_state.student_data = load_student_texts()
@@ -186,7 +201,11 @@ def show_practice1():
     q = st.session_state.current_question
     if len(grade_data) >= q:
         current_data = grade_data[q-1]
-        st.markdown(f"### 📖 학생 글\n\n{current_data['text']}")
+        st.markdown(f"### 📖 학생 글")
+        st.markdown(
+            f"<div style='background:#f8f9fa;padding:1rem;border-radius:10px;white-space:pre-wrap'>{current_data['text']}</div>",
+            unsafe_allow_html=True
+        )
         st.markdown("### 🎯 이 글의 등급을 선택하세요")
         cols = st.columns(5)
         selected_grade = None
@@ -194,10 +213,9 @@ def show_practice1():
             with cols[i]:
                 if st.button(f"{grade}등급", key=f"grade_{grade}_{q}"):
                     selected_grade = grade
-        if selected_grade:
+        if selected_grade is not None:
             is_correct = selected_grade == current_data['correct_grade']
             st.write(f"정답: {current_data['correct_grade']}등급, 선택: {selected_grade}등급")
-            # 피드백 이미지: file_id와 동일한 번호의 png 사용
             feedback_paths = [
                 f"data/f_grade/{current_data['file_id']}.png",
                 f"data/g_feed/{current_data['file_id']}.png"
@@ -224,7 +242,11 @@ def show_practice2():
     q = st.session_state.current_question
     if len(score_data) >= q:
         current_data = score_data[q-1]
-        st.markdown(f"### 📖 학생 글\n\n{current_data['text']}")
+        st.markdown(f"### 📖 학생 글")
+        st.markdown(
+            f"<div style='background:#f8f9fa;padding:1rem;border-radius:10px;white-space:pre-wrap'>{current_data['text']}</div>",
+            unsafe_allow_html=True
+        )
         with st.form(f"score_form_{q}"):
             content = st.number_input("내용 점수 (3-18)", min_value=3, max_value=18, value=10)
             organization = st.number_input("조직 점수 (2-12)", min_value=2, max_value=12, value=7)
@@ -233,7 +255,6 @@ def show_practice2():
             if st.form_submit_button("점수 제출하기"):
                 st.write(f"정답: 내용 {current_data['content_score']}, 조직 {current_data['organization_score']}, 표현 {current_data['expression_score']}")
                 st.write(f"총점: {total} / 정답 총점: {current_data['content_score'] + current_data['organization_score'] + current_data['expression_score']}")
-                # 피드백 이미지: file_id와 동일한 번호의 png 사용
                 feedback_paths = [
                     f"data/f_score/{current_data['file_id']}.png",
                     f"data/s_feed/{current_data['file_id']}.png"
@@ -257,7 +278,10 @@ def show_results():
     st.title("🎉 학습 완료!")
     st.balloons()
     st.success(f"{st.session_state.user_name}님, 연습을 완료하셨습니다!")
-    st.button("처음으로", on_click=lambda: [st.session_state.clear(), st.rerun()])
+    if st.button("처음으로"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
 
 def main():
     initialize_session_state()
