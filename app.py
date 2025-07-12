@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
-import glob
 from datetime import datetime
 
 # 페이지 설정
@@ -24,184 +23,142 @@ def initialize_session_state():
         st.session_state.start_time = datetime.now()
 
 def load_student_texts():
-    """glob을 활용한 동적 파일 감지 및 기존 파싱 로직 적용"""
+    """올바른 파일 구조에 맞게 데이터 로드"""
     samples = []
     
-    st.info("📁 glob 패턴으로 txt 파일들을 자동 감지합니다...")
+    st.info("📁 올바른 구조로 학생 글 데이터를 로딩합니다...")
     
+    # grade 폴더의 모든 txt 파일 처리
     try:
-        # grade 폴더의 모든 txt 파일을 glob으로 찾기
-        grade_pattern = "data/grade/*.txt"
-        grade_files = glob.glob(grade_pattern)
-        grade_files.sort()
-        
-        st.write(f"🔍 grade 폴더에서 발견된 파일들: {[os.path.basename(f) for f in grade_files]}")
-        
-        # 연습1용 데이터 로드
-        grade_count = 0
-        for i, file_path in enumerate(grade_files[:15], 1):
-            try:
-                # 다중 인코딩 시도
-                content = None
-                for encoding in ['utf-8', 'cp949', 'euc-kr']:
+        if os.path.exists("data/grade"):
+            grade_files = [f for f in os.listdir("data/grade") if f.endswith('.txt')]
+            st.write(f"📚 grade 폴더 파일들: {grade_files}")
+            
+            for filename in grade_files:
+                try:
+                    file_path = f"data/grade/{filename}"
+                    
+                    # 파일 읽기
                     try:
-                        with open(file_path, 'r', encoding=encoding) as f:
-                            content = f.read()
-                        break
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            lines = f.readlines()
                     except UnicodeDecodeError:
-                        continue
-                
-                if content is None:
-                    continue
-                
-                # 기존 파싱 로직 적용
-                lines = [line.rstrip() for line in content.split('\n')]
-                
-                # 디버깅: 파일 내용 확인
-                st.write(f"**{os.path.basename(file_path)} 분석:**")
-                st.write(f"- 총 줄 수: {len(lines)}")
-                st.write(f"- 첫 5줄: {lines[:5]}")
-                
-                if len(lines) >= 6:
-                    try:
-                        correct_grade = int(lines[0].strip())
-                        content_score = int(lines[1].strip())
-                        organization_score = int(lines[2].strip())
-                        expression_score = int(lines[3].strip())
+                        with open(file_path, 'r', encoding='cp949') as f:
+                            lines = f.readlines()
+                    
+                    if len(lines) >= 6:
+                        # 올바른 구조로 파싱
+                        question_num = int(lines[0].strip())  # 1행: 문제 번호
+                        correct_grade = int(lines[1].strip())  # 2행: 등급 정답
+                        content_score = int(lines[2].strip())  # 3행: 내용 점수
+                        organization_score = int(lines[3].strip())  # 4행: 조직 점수
+                        expression_score = int(lines[4].strip())  # 5행: 표현 점수
                         
-                        # 학생 글 내용 추출 (5번째 줄부터)
-                        student_text_lines = []
-                        for line_idx in range(5, len(lines)):
-                            if lines[line_idx].strip():  # 빈 줄이 아닌 경우만
-                                student_text_lines.append(lines[line_idx])
+                        # 6행부터 끝까지: 학생 글
+                        student_text = ''.join(lines[5:]).strip()
                         
-                        student_text = '\n'.join(student_text_lines).strip()
-                        
-                        st.write(f"- 추출된 글 길이: {len(student_text)}자")
-                        st.write(f"- 글 미리보기: {student_text[:100]}...")
-                        
-                        if student_text and len(student_text) > 20:
+                        if student_text:
                             samples.append({
-                                'id': i,
+                                'question_num': question_num,
                                 'text': student_text,
                                 'correct_grade': correct_grade,
                                 'content_score': content_score,
                                 'organization_score': organization_score,
                                 'expression_score': expression_score,
                                 'type': 'grade',
-                                'filename': os.path.basename(file_path)
+                                'filename': filename
                             })
-                            grade_count += 1
-                            st.success(f"✅ {os.path.basename(file_path)} 로드 성공")
-                        else:
-                            st.warning(f"⚠️ {os.path.basename(file_path)}: 학생 글 내용이 없거나 너무 짧습니다.")
-                    except ValueError as e:
-                        st.error(f"❌ {os.path.basename(file_path)}: 점수 파싱 오류 - {e}")
-                else:
-                    st.warning(f"⚠️ {os.path.basename(file_path)}: 줄 수 부족 ({len(lines)}줄)")
+                            st.success(f"✅ {filename} 로드 성공 (문제 {question_num}번)")
                         
-            except Exception as e:
-                st.error(f"❌ {os.path.basename(file_path)} 처리 오류: {e}")
+                except Exception as e:
+                    st.warning(f"❌ {filename} 오류: {e}")
         
-        # score 폴더도 동일하게 처리
-        score_pattern = "data/score/*.txt"
-        score_files = glob.glob(score_pattern)
-        score_files.sort()
-        
-        score_count = 0
-        for i, file_path in enumerate(score_files[:15], 1):
-            try:
-                content = None
-                for encoding in ['utf-8', 'cp949', 'euc-kr']:
+        # score 폴더의 모든 txt 파일 처리
+        if os.path.exists("data/score"):
+            score_files = [f for f in os.listdir("data/score") if f.endswith('.txt')]
+            st.write(f"📊 score 폴더 파일들: {score_files}")
+            
+            for filename in score_files:
+                try:
+                    file_path = f"data/score/{filename}"
+                    
                     try:
-                        with open(file_path, 'r', encoding=encoding) as f:
-                            content = f.read()
-                        break
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            lines = f.readlines()
                     except UnicodeDecodeError:
-                        continue
-                
-                if content is None:
-                    continue
-                
-                lines = [line.rstrip() for line in content.split('\n')]
-                
-                if len(lines) >= 6:
-                    try:
-                        correct_grade = int(lines[0].strip())
-                        content_score = int(lines[1].strip())
-                        organization_score = int(lines[2].strip())
-                        expression_score = int(lines[3].strip())
+                        with open(file_path, 'r', encoding='cp949') as f:
+                            lines = f.readlines()
+                    
+                    if len(lines) >= 6:
+                        question_num = int(lines[0].strip())
+                        correct_grade = int(lines[1].strip())
+                        content_score = int(lines[2].strip())
+                        organization_score = int(lines[3].strip())
+                        expression_score = int(lines[4].strip())
+                        student_text = ''.join(lines[5:]).strip()
                         
-                        student_text_lines = []
-                        for line_idx in range(5, len(lines)):
-                            if lines[line_idx].strip():
-                                student_text_lines.append(lines[line_idx])
-                        
-                        student_text = '\n'.join(student_text_lines).strip()
-                        
-                        if student_text and len(student_text) > 20:
+                        if student_text:
                             samples.append({
-                                'id': i + 15,
+                                'question_num': question_num,
                                 'text': student_text,
                                 'correct_grade': correct_grade,
                                 'content_score': content_score,
                                 'organization_score': organization_score,
                                 'expression_score': expression_score,
                                 'type': 'score',
-                                'filename': os.path.basename(file_path)
+                                'filename': filename
                             })
-                            score_count += 1
-                    except ValueError:
-                        continue
+                            st.success(f"✅ {filename} 로드 성공 (문제 {question_num}번)")
                         
-            except Exception:
-                continue
+                except Exception as e:
+                    st.warning(f"❌ {filename} 오류: {e}")
         
-        st.info(f"📊 연습2 (score): {score_count}개 파일 로드 완료")
-        
-        if len(samples) > 0:
-            st.success(f"🎉 총 {len(samples)}개 파일 로드 성공!")
+        if samples:
+            # 문제 번호 순으로 정렬
+            samples.sort(key=lambda x: (x['type'], x['question_num']))
+            st.success(f"🎉 총 {len(samples)}개 파일 로드 완료!")
             return samples
         else:
-            st.error("❌ 파일 로드 실패. 강제 샘플 데이터 사용")
-            return generate_fallback_data()
+            st.error("❌ 파일을 찾을 수 없습니다. 샘플 데이터를 사용합니다.")
+            return generate_sample_data()
             
     except Exception as e:
-        st.error(f"❌ 전체 로딩 오류: {e}")
-        return generate_fallback_data()
+        st.error(f"❌ 폴더 접근 오류: {e}")
+        return generate_sample_data()
 
-def generate_fallback_data():
-    """강제 샘플 데이터 생성"""
-    st.warning("🔧 강제 샘플 데이터를 생성합니다.")
-    
-    sample_text = """인간이 사용할 약이나 화장품 등이 인간에게 해를 끼치지 않는지를 알아보기 위해 대부분의 회사나 공공 기관들이 동물 실험을 한다. 하지만 본래 인간과 동물은 다르기 때문에 인간과 동물에게서 나타나는 효과가 다르다. 독일의 입덧 방지약에 들어있던 탈리도마이드라는 물질은 쥐나 개, 고양이에 대한 동물 실험에서 아무런 부작용을 일으키지 않았지만 정작 원숭이와 사람에게는 팔이나 다리뼈가 발달하지 않거나 극단적으로 짧은 기형아를 발생시켰다."""
-    
+def generate_sample_data():
+    """샘플 데이터 생성"""
     samples = []
     
-    # 연습1용 데이터
-    for i in range(15):
+    sample_text = """인간이 사용할 약이나 화장품 등이 인간에게 해를 끼치지 않는지를 알아보기 위해 대부분의 회사나 공공 기관들이 동물 실험을 한다. 하지만 본래 인간과 동물은 다르기 때문에 인간과 동물에게서 나타나는 효과가 다르다. <자료>를 보면 '독일의 입덧 방지약에 들어있던 탈리도마이드라는 물질은 쥐나 개, 고양이에 대한 동물 실험에서 아무런 부작용을 일으키지 않았지만 정작 원숭이와 사람에게는 팔이나 다리뼈가 발달하지 않거나 극단적으로 짧은 기형아를 발생시켰다.'라는 내용을 통해 동물 실험의 결과와 인간에게서 나타나는 결과가 다르다는 것을 알 수 있다."""
+    
+    # 연습1용 샘플 데이터
+    for i in range(1, 16):
         samples.append({
-            'id': i + 1,
-            'text': sample_text + f" 따라서 동물 실험에 대한 신중한 접근이 필요하다. (연습1 문제 {i+1}번)",
+            'question_num': i,
+            'text': sample_text + f" (연습1 문제 {i}번)",
             'correct_grade': 3,
             'content_score': 12,
             'organization_score': 8,
             'expression_score': 7,
-            'type': 'grade'
+            'type': 'grade',
+            'filename': f'sample_{i}.txt'
         })
     
-    # 연습2용 데이터
-    for i in range(15):
+    # 연습2용 샘플 데이터
+    for i in range(1, 16):
         samples.append({
-            'id': i + 16,
-            'text': sample_text + f" 윤리적 고려와 함께 대안 방법을 모색해야 한다. (연습2 문제 {i+1}번)",
+            'question_num': i,
+            'text': sample_text + f" (연습2 문제 {i}번)",
             'correct_grade': 3,
             'content_score': 12,
             'organization_score': 8,
             'expression_score': 7,
-            'type': 'score'
+            'type': 'score',
+            'filename': f'sample_score_{i}.txt'
         })
     
+    st.success(f"✅ 샘플 데이터 생성 완료: {len(samples)}개")
     return samples
 
 def show_intro_page():
@@ -209,6 +166,12 @@ def show_intro_page():
     st.title("🎯 SEP ME ver.6")
     st.subheader("학생 글 채점 연습 프로그램")
     
+    st.markdown("""
+    **SEP ME**는 학생 글 채점 능력 향상을 위한 AI 기반 학습 도구입니다.
+    실제 학생들이 작성한 글을 바탕으로 채점 연습을 할 수 있습니다.
+    """)
+    
+    # 사용자 정보 입력
     with st.form("user_info"):
         st.markdown("#### 📝 사용자 정보")
         name = st.text_input("이름을 입력해주세요:", placeholder="홍길동")
@@ -229,6 +192,8 @@ def show_intro_page():
 def show_assignment_info():
     """과제 및 평가기준 안내"""
     st.title("📋 쓰기 과제 및 평가 기준")
+    
+    st.info("평가를 시작하기 전에 쓰기 과제 및 쓰기 평가 기준을 확인해 주세요.")
     
     col1, col2 = st.columns(2)
     
@@ -255,24 +220,38 @@ def show_assignment_info():
     })
     st.table(grade_df)
     
+    # 영역별 점수 기준
+    st.subheader("📝 영역별 점수 기준")
+    score_df = pd.DataFrame({
+        '영역': ['내용', '조직', '표현'],
+        '점수 범위': ['3-18점', '2-12점', '2-12점'],
+        '평가 요소': [
+            '주제 적합성, 내용의 충실성, 독창성',
+            '글의 구성, 단락 구성, 논리적 연결',
+            '어휘 사용, 문장 표현, 맞춤법'
+        ]
+    })
+    st.table(score_df)
+    
     # 체크리스트
+    st.subheader("✅ 평가 전 점검 항목")
+    
     with st.form("checklist"):
         st.markdown("**상위 인지 요소 점검**")
         
-        checks = []
-        checks.append(st.checkbox("1. 학생 글을 평가하는 목적을 설정하고 평가 전략을 세웠다."))
-        checks.append(st.checkbox("2. 쓰기 과제 및 평가 기준을 확인하고 변별 방법을 점검했다."))
-        checks.append(st.checkbox("3. 평가 기준을 고려하여 예시문의 특징을 정확히 파악했다."))
-        checks.append(st.checkbox("4. 평가 기준에 적합한 학생 글의 예를 머릿속으로 떠올렸다."))
-        checks.append(st.checkbox("5. 학생 글을 일관되게 평가할 것을 다짐했다."))
-        checks.append(st.checkbox("6. 학생 글을 공정하고 객관적으로 평가할 것을 다짐했다."))
-        checks.append(st.checkbox("7. 평가 과정과 결과를 반성적으로 점검할 것을 다짐했다."))
+        check1 = st.checkbox("1. 학생 글을 평가하는 목적을 설정하고 평가 전략을 세웠다.")
+        check2 = st.checkbox("2. 쓰기 과제 및 평가 기준을 확인하고 변별 방법을 점검했다.")
+        check3 = st.checkbox("3. 평가 기준을 고려하여 예시문의 특징을 정확히 파악했다.")
+        check4 = st.checkbox("4. 평가 기준에 적합한 학생 글의 예를 머릿속으로 떠올렸다.")
+        check5 = st.checkbox("5. 학생 글을 일관되게 평가할 것을 다짐했다.")
+        check6 = st.checkbox("6. 학생 글을 공정하고 객관적으로 평가할 것을 다짐했다.")
+        check7 = st.checkbox("7. 평가 과정과 결과를 반성적으로 점검할 것을 다짐했다.")
         
         if st.form_submit_button("다음 단계로 →", type="primary", use_container_width=True):
-            if all(checks):
+            if all([check1, check2, check3, check4, check5, check6, check7]):
                 st.session_state.stage = 'practice_selection'
                 st.session_state.student_data = load_student_texts()
-                st.success("모든 준비가 완료되었습니다!")
+                st.success("모든 준비가 완료되었습니다! 연습 유형을 선택해주세요.")
                 st.rerun()
             else:
                 st.warning("모든 항목을 확인해주세요.")
@@ -281,6 +260,11 @@ def show_practice_selection():
     """연습 유형 선택 페이지"""
     st.title("🎯 연습 유형 선택")
     
+    st.markdown("""
+    어떤 연습을 하시겠습니까? 각 연습은 15문제로 구성되어 있습니다.
+    """)
+    
+    # 연습 유형 선택 카드
     col1, col2 = st.columns(2)
     
     with col1:
@@ -292,16 +276,23 @@ def show_practice_selection():
             color: white;
             text-align: center;
             margin: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         ">
             <h3>📚 연습1: 등급 추정</h3>
             <p>학생 글을 읽고 1~5등급 중 선택</p>
+            <ul style="text-align: left; margin-top: 1rem;">
+                <li>15개의 학생 글 제시</li>
+                <li>1~5등급 중 선택</li>
+                <li>즉시 피드백 제공</li>
+                <li>등급별 특성 학습</li>
+            </ul>
         </div>
         """, unsafe_allow_html=True)
         
         if st.button("📚 연습1 시작하기", type="primary", use_container_width=True):
             st.session_state.selected_practice = 'practice1'
             st.session_state.stage = 'practice1'
-            st.session_state.current_question = 1  # 명시적으로 1로 초기화
+            st.session_state.current_question = 1
             st.rerun()
     
     with col2:
@@ -313,24 +304,53 @@ def show_practice_selection():
             color: white;
             text-align: center;
             margin: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         ">
             <h3>📊 연습2: 점수 추정</h3>
             <p>내용/조직/표현 영역별 점수 입력</p>
+            <ul style="text-align: left; margin-top: 1rem;">
+                <li>15개의 학생 글 제시</li>
+                <li>내용/조직/표현 영역별 점수</li>
+                <li>상세 분석 제공</li>
+                <li>정확한 채점 기준 학습</li>
+            </ul>
         </div>
         """, unsafe_allow_html=True)
         
         if st.button("📊 연습2 시작하기", type="primary", use_container_width=True):
             st.session_state.selected_practice = 'practice2'
             st.session_state.stage = 'practice2'
-            st.session_state.current_question = 1  # 명시적으로 1로 초기화
+            st.session_state.current_question = 1
+            st.rerun()
+    
+    # 두 연습 모두 하기 옵션
+    st.markdown("---")
+    col_both1, col_both2, col_both3 = st.columns([1, 2, 1])
+    
+    with col_both2:
+        st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            margin: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        ">
+            <h4>🎯 두 연습 모두 하기</h4>
+            <p>연습1 완료 후 자동으로 연습2로 이동</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("🎯 두 연습 모두 시작하기", type="secondary", use_container_width=True):
+            st.session_state.selected_practice = 'both'
+            st.session_state.stage = 'practice1'
+            st.session_state.current_question = 1
             st.rerun()
 
 def show_practice1():
     """연습1 - 등급 추정"""
     st.title("📚 연습1: 글의 등급 추정하기")
-    
-    # 현재 문제 번호 디버깅
-    st.write(f"🔍 **디버깅 정보**: 현재 문제 번호 = {st.session_state.current_question}")
     
     # 진행률
     progress = (st.session_state.current_question - 1) / 15
@@ -339,38 +359,28 @@ def show_practice1():
     
     # 현재 문제 데이터 가져오기
     if 'student_data' in st.session_state and st.session_state.student_data:
+        # 연습1용 데이터만 필터링
         grade_data = [item for item in st.session_state.student_data if item.get('type') == 'grade']
-        
-        st.write(f"🔍 **사용 가능한 grade 데이터**: {len(grade_data)}개")
         
         if len(grade_data) >= st.session_state.current_question:
             current_data = grade_data[st.session_state.current_question - 1]
             
-            # 현재 데이터 디버깅
-            st.write(f"🔍 **현재 데이터 ID**: {current_data.get('id', 'N/A')}")
-            st.write(f"🔍 **파일명**: {current_data.get('filename', 'N/A')}")
-            st.write(f"🔍 **텍스트 길이**: {len(current_data.get('text', ''))}자")
-            
             st.markdown("### 📖 학생 글")
-            if current_data.get('text'):
-                st.markdown(f"""
-                <div style="
-                    background-color: #f8f9fa;
-                    padding: 2rem;
-                    border-radius: 10px;
-                    border-left: 5px solid #007bff;
-                    margin: 1rem 0;
-                    font-size: 1.1rem;
-                    line-height: 1.6;
-                    white-space: pre-wrap;
-                ">
-                <strong>문제 {st.session_state.current_question}번</strong><br><br>
-                {current_data['text']}
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.error("❌ 학생 글 내용이 비어있습니다.")
-                st.write(f"**전체 데이터**: {current_data}")
+            st.markdown(f"""
+            <div style="
+                background-color: #f8f9fa;
+                padding: 2rem;
+                border-radius: 10px;
+                border-left: 5px solid #007bff;
+                margin: 1rem 0;
+                font-size: 1.1rem;
+                line-height: 1.6;
+                white-space: pre-wrap;
+            ">
+            <strong>문제 {st.session_state.current_question}번</strong> (원본 문제번호: {current_data['question_num']})<br><br>
+            {current_data['text']}
+            </div>
+            """, unsafe_allow_html=True)
             
             # 등급 선택
             st.markdown("### 🎯 이 글의 등급을 선택하세요")
@@ -396,6 +406,7 @@ def show_practice1():
                 is_correct = selected_grade == current_data['correct_grade']
                 result = {
                     'question': st.session_state.current_question,
+                    'question_num': current_data['question_num'],
                     'selected': selected_grade,
                     'correct': current_data['correct_grade'],
                     'is_correct': is_correct,
@@ -413,21 +424,16 @@ def show_practice1():
                 else:
                     st.error(f"😔 아쉽지만 오답입니다. 정답: {current_data['correct_grade']}등급, 선택: {selected_grade}등급")
                     
-                    # 피드백 이미지 표시 (현재 문제 번호 사용)
+                    # 피드백 이미지 표시 (문제 번호 기반)
                     feedback_paths = [
-                        f"data/f_grade/{st.session_state.current_question}.png",
-                        f"data/g_feed/{st.session_state.current_question}.png"
+                        f"data/g_feed/{current_data['question_num']}.png",
+                        f"data/f_grade/{current_data['question_num']}.png"
                     ]
                     
-                    image_found = False
                     for feedback_path in feedback_paths:
                         if os.path.exists(feedback_path):
-                            st.image(feedback_path, caption=f"문제 {st.session_state.current_question}번 피드백")
-                            image_found = True
+                            st.image(feedback_path, caption="상세 피드백")
                             break
-                    
-                    if not image_found:
-                        st.info(f"피드백 이미지 ({st.session_state.current_question}.png)를 찾을 수 없습니다.")
                 
                 # 다음 문제로
                 st.markdown("---")
@@ -436,23 +442,32 @@ def show_practice1():
                 with col_btn2:
                     if st.session_state.current_question < 15:
                         if st.button("다음 문제 →", type="primary", use_container_width=True):
-                            st.session_state.current_question += 1  # 문제 번호 증가
+                            st.session_state.current_question += 1
                             st.rerun()
                     else:
-                        if st.button("결과 보기 →", type="primary", use_container_width=True):
-                            st.session_state.stage = 'results'
-                            st.rerun()
+                        # 연습1 완료 후 다음 단계 결정
+                        if st.session_state.selected_practice == 'both':
+                            if st.button("연습2로 이동 →", type="primary", use_container_width=True):
+                                st.session_state.stage = 'practice2'
+                                st.session_state.current_question = 1
+                                st.rerun()
+                        elif st.session_state.selected_practice == 'practice1':
+                            if st.button("결과 보기 →", type="primary", use_container_width=True):
+                                st.session_state.stage = 'results'
+                                st.rerun()
+                        else:
+                            if st.button("연습2로 이동 →", type="primary", use_container_width=True):
+                                st.session_state.stage = 'practice2'
+                                st.session_state.current_question = 1
+                                st.rerun()
         else:
-            st.error(f"연습1 데이터가 부족합니다. (현재: {len(grade_data)}개, 필요: {st.session_state.current_question}개)")
+            st.error(f"연습1 데이터가 부족합니다. (현재: {len(grade_data)}개, 필요: 15개)")
     else:
         st.error("학생 글 데이터를 로드할 수 없습니다.")
 
 def show_practice2():
     """연습2 - 점수 추정"""
     st.title("📊 연습2: 글의 점수 추정하기")
-    
-    # 현재 문제 번호 디버깅
-    st.write(f"🔍 **디버깅 정보**: 현재 문제 번호 = {st.session_state.current_question}")
     
     # 진행률
     progress = (st.session_state.current_question - 1) / 15
@@ -461,30 +476,28 @@ def show_practice2():
     
     # 현재 문제 데이터 가져오기
     if 'student_data' in st.session_state and st.session_state.student_data:
+        # 연습2용 데이터만 필터링
         score_data = [item for item in st.session_state.student_data if item.get('type') == 'score']
         
         if len(score_data) >= st.session_state.current_question:
             current_data = score_data[st.session_state.current_question - 1]
             
             st.markdown("### 📖 학생 글")
-            if current_data.get('text'):
-                st.markdown(f"""
-                <div style="
-                    background-color: #f8f9fa;
-                    padding: 2rem;
-                    border-radius: 10px;
-                    border-left: 5px solid #007bff;
-                    margin: 1rem 0;
-                    font-size: 1.1rem;
-                    line-height: 1.6;
-                    white-space: pre-wrap;
-                ">
-                <strong>문제 {st.session_state.current_question}번</strong><br><br>
-                {current_data['text']}
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.error("❌ 학생 글 내용이 비어있습니다.")
+            st.markdown(f"""
+            <div style="
+                background-color: #f8f9fa;
+                padding: 2rem;
+                border-radius: 10px;
+                border-left: 5px solid #007bff;
+                margin: 1rem 0;
+                font-size: 1.1rem;
+                line-height: 1.6;
+                white-space: pre-wrap;
+            ">
+            <strong>문제 {st.session_state.current_question}번</strong> (원본 문제번호: {current_data['question_num']})<br><br>
+            {current_data['text']}
+            </div>
+            """, unsafe_allow_html=True)
             
             # 점수 입력
             st.markdown("### 🎯 영역별 점수를 입력하세요")
@@ -494,28 +507,52 @@ def show_practice2():
                 
                 with col1:
                     st.markdown("**내용 영역 (3-18점)**")
-                    content = st.number_input("내용 점수", min_value=3, max_value=18, value=10)
+                    st.caption("주제 적합성, 내용의 충실성, 독창성")
+                    content = st.number_input("내용 점수", min_value=3, max_value=18, value=10, label_visibility="collapsed")
                 
                 with col2:
                     st.markdown("**조직 영역 (2-12점)**")
-                    organization = st.number_input("조직 점수", min_value=2, max_value=12, value=7)
+                    st.caption("글의 구성, 단락 구성, 논리적 연결")
+                    organization = st.number_input("조직 점수", min_value=2, max_value=12, value=7, label_visibility="collapsed")
                 
                 with col3:
                     st.markdown("**표현 영역 (2-12점)**")
-                    expression = st.number_input("표현 점수", min_value=2, max_value=12, value=7)
+                    st.caption("어휘 사용, 문장 표현, 맞춤법")
+                    expression = st.number_input("표현 점수", min_value=2, max_value=12, value=7, label_visibility="collapsed")
                 
                 total = content + organization + expression
-                st.write(f"**총점: {total}점**")
+                
+                # 총점 표시
+                st.markdown("---")
+                col_total1, col_total2, col_total3 = st.columns(3)
+                with col_total2:
+                    st.markdown(f"""
+                    <div style="
+                        background: white;
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        text-align: center;
+                        border: 1px solid #e9ecef;
+                    ">
+                    <h3>총점: {total}점</h3>
+                    <h4>예상 등급: {score_to_grade(total)}등급</h4>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
                 if st.form_submit_button("점수 제출하기", type="primary", use_container_width=True):
                     # 결과 저장
                     correct_total = current_data['content_score'] + current_data['organization_score'] + current_data['expression_score']
                     result = {
                         'question': st.session_state.current_question,
+                        'question_num': current_data['question_num'],
                         'content': content,
                         'organization': organization,
                         'expression': expression,
                         'total': total,
+                        'correct_content': current_data['content_score'],
+                        'correct_organization': current_data['organization_score'],
+                        'correct_expression': current_data['expression_score'],
                         'correct_total': correct_total,
                         'timestamp': datetime.now()
                     }
@@ -525,60 +562,264 @@ def show_practice2():
                         st.session_state.practice2_results.append(result)
                     
                     # 피드백
-                    total_diff = abs(total - correct_total)
-                    if total_diff <= 2:
-                        st.success("🎉 매우 정확한 채점입니다!")
-                    elif total_diff <= 5:
-                        st.info("👍 양호한 채점입니다.")
-                    else:
-                        st.warning("💡 채점 기준을 다시 검토해보세요.")
-                    
-                    # 피드백 이미지 표시
-                    feedback_paths = [
-                        f"data/f_score/{st.session_state.current_question}.png",
-                        f"data/s_feed/{st.session_state.current_question}.png"
-                    ]
-                    
-                    for feedback_path in feedback_paths:
-                        if os.path.exists(feedback_path):
-                            st.image(feedback_path, caption=f"문제 {st.session_state.current_question}번 피드백")
-                            break
+                    show_score_feedback(result, current_data['question_num'])
                     
                     # 다음 문제로
                     st.markdown("---")
-                    if st.session_state.current_question < 15:
-                        if st.button("다음 문제 →", type="primary", use_container_width=True):
-                            st.session_state.current_question += 1  # 문제 번호 증가
-                            st.rerun()
-                    else:
-                        if st.button("결과 보기 →", type="primary", use_container_width=True):
-                            st.session_state.stage = 'results'
-                            st.rerun()
+                    col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
+                    
+                    with col_btn2:
+                        if st.session_state.current_question < 15:
+                            if st.button("다음 문제 →", type="primary", use_container_width=True):
+                                st.session_state.current_question += 1
+                                st.rerun()
+                        else:
+                            if st.button("결과 보기 →", type="primary", use_container_width=True):
+                                st.session_state.stage = 'results'
+                                st.rerun()
+        else:
+            st.error(f"연습2 데이터가 부족합니다. (현재: {len(score_data)}개, 필요: 15개)")
+    else:
+        st.error("학생 글 데이터를 로드할 수 없습니다.")
+
+def score_to_grade(total_score):
+    """총점을 등급으로 변환"""
+    if total_score >= 29:
+        return 1
+    elif total_score >= 27:
+        return 2
+    elif total_score >= 24:
+        return 3
+    elif total_score >= 20:
+        return 4
+    else:
+        return 5
+
+def show_score_feedback(result, question_num):
+    """점수 피드백 표시"""
+    content_diff = result['content'] - result['correct_content']
+    org_diff = result['organization'] - result['correct_organization']
+    exp_diff = result['expression'] - result['correct_expression']
+    total_diff = result['total'] - result['correct_total']
+    
+    st.markdown("### 📊 채점 결과 분석")
+    
+    # 점수 비교 표시
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "내용 영역",
+            f"{result['content']}점",
+            f"{content_diff:+d}점"
+        )
+        st.caption(f"정답: {result['correct_content']}점")
+    
+    with col2:
+        st.metric(
+            "조직 영역", 
+            f"{result['organization']}점",
+            f"{org_diff:+d}점"
+        )
+        st.caption(f"정답: {result['correct_organization']}점")
+    
+    with col3:
+        st.metric(
+            "표현 영역",
+            f"{result['expression']}점", 
+            f"{exp_diff:+d}점"
+        )
+        st.caption(f"정답: {result['correct_expression']}점")
+    
+    with col4:
+        st.metric(
+            "총점",
+            f"{result['total']}점",
+            f"{total_diff:+d}점"
+        )
+        st.caption(f"정답: {result['correct_total']}점")
+    
+    # 정확도 평가
+    abs_total_diff = abs(total_diff)
+    if abs_total_diff <= 2:
+        st.success("🎉 매우 정확한 채점입니다! 훌륭한 평가 능력을 보여주셨습니다.")
+    elif abs_total_diff <= 5:
+        st.info("👍 양호한 채점입니다. 조금 더 세밀한 관찰이 필요합니다.")
+    else:
+        st.warning("💡 채점 기준을 다시 검토해보세요. 각 영역별 특성을 더 자세히 살펴보시기 바랍니다.")
+    
+    # 피드백 이미지 표시 (문제 번호 기반)
+    feedback_paths = [
+        f"data/s_feed/{question_num}.png",
+        f"data/f_score/{question_num}.png"
+    ]
+    
+    for feedback_path in feedback_paths:
+        if os.path.exists(feedback_path):
+            st.image(feedback_path, caption="상세 피드백")
+            break
 
 def show_results():
     """결과 페이지"""
     st.title("🎉 학습 완료!")
     st.balloons()
     
+    # 완료 메시지
     total_time = datetime.now() - st.session_state.start_time
     st.success(f"🎊 {st.session_state.user_name}님, 연습을 완료하셨습니다! (소요시간: {total_time.seconds // 60}분)")
     
-    # 결과 표시
+    # 선택한 연습에 따른 결과 표시
+    if st.session_state.selected_practice == 'practice1':
+        st.info("📚 연습1 (등급 추정) 결과만 표시됩니다.")
+    elif st.session_state.selected_practice == 'practice2':
+        st.info("📊 연습2 (점수 추정) 결과만 표시됩니다.")
+    else:
+        st.info("🎯 완료한 연습 결과를 표시합니다.")
+    
+    # 결과 요약
+    st.markdown("### 📊 종합 결과")
+    
+    # 동적으로 컬럼 수 조정
+    results_available = []
     if st.session_state.practice1_results:
-        st.subheader("📈 연습1 결과")
-        results_df = pd.DataFrame(st.session_state.practice1_results)
-        st.dataframe(results_df)
-    
+        results_available.append('practice1')
     if st.session_state.practice2_results:
-        st.subheader("📊 연습2 결과")
-        results_df = pd.DataFrame(st.session_state.practice2_results)
-        st.dataframe(results_df)
+        results_available.append('practice2')
     
-    # 다시 시작 버튼
-    if st.button("🏠 처음으로", use_container_width=True):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+    if len(results_available) == 1:
+        col1, col2, col3 = st.columns(3)
+        cols = [col1, col2, col3]
+    else:
+        col1, col2, col3, col4 = st.columns(4)
+        cols = [col1, col2, col3, col4]
+    
+    col_idx = 0
+    
+    # 연습1 결과
+    if st.session_state.practice1_results:
+        p1_correct = sum(1 for r in st.session_state.practice1_results if r['is_correct'])
+        p1_accuracy = (p1_correct / len(st.session_state.practice1_results)) * 100
+        
+        with cols[col_idx]:
+            st.metric("연습1 정답률", f"{p1_accuracy:.1f}%", f"{p1_correct}/15")
+        col_idx += 1
+    
+    # 연습2 결과
+    if st.session_state.practice2_results:
+        avg_error = np.mean([abs(r['total'] - r['correct_total']) for r in st.session_state.practice2_results])
+        accuracy = max(0, 100 - avg_error * 8)
+        
+        with cols[col_idx]:
+            st.metric("연습2 정확도", f"{accuracy:.1f}%")
+        col_idx += 1
+        
+        if col_idx < len(cols):
+            with cols[col_idx]:
+                st.metric("평균 오차", f"{avg_error:.1f}점")
+            col_idx += 1
+    
+    # 전체 성과 (두 연습 모두 완료한 경우)
+    if st.session_state.practice1_results and st.session_state.practice2_results and col_idx < len(cols):
+        with cols[col_idx]:
+            overall_score = (p1_accuracy + accuracy) / 2
+            st.metric("종합 점수", f"{overall_score:.1f}점")
+    
+    # 상세 결과 표시
+    st.markdown("---")
+    
+    # 탭 구성 (완료한 연습에 따라)
+    tabs = []
+    if st.session_state.practice1_results:
+        tabs.append("📈 연습1 결과")
+    if st.session_state.practice2_results:
+        tabs.append("📊 연습2 결과")
+    
+    if len(tabs) == 1:
+        # 하나의 연습만 완료한 경우
+        st.markdown(f"### {tabs[0]}")
+        if st.session_state.practice1_results:
+            results_df = pd.DataFrame(st.session_state.practice1_results)
+            display_df = results_df[['question', 'question_num', 'selected', 'correct', 'is_correct']].copy()
+            display_df.columns = ['순서', '문제번호', '선택등급', '정답등급', '정답여부']
+            display_df['정답여부'] = display_df['정답여부'].map({True: '✅', False: '❌'})
+            st.dataframe(display_df, use_container_width=True)
+        else:
+            results_df = pd.DataFrame(st.session_state.practice2_results)
+            display_df = results_df[['question', 'question_num', 'content', 'organization', 'expression', 'total', 'correct_total']].copy()
+            display_df.columns = ['순서', '문제번호', '내용점수', '조직점수', '표현점수', '총점', '정답총점']
+            display_df['점수차이'] = display_df['총점'] - display_df['정답총점']
+            st.dataframe(display_df, use_container_width=True)
+    else:
+        # 두 연습 모두 완료한 경우
+        tab1, tab2 = st.tabs(tabs)
+        
+        with tab1:
+            if st.session_state.practice1_results:
+                results_df = pd.DataFrame(st.session_state.practice1_results)
+                display_df = results_df[['question', 'question_num', 'selected', 'correct', 'is_correct']].copy()
+                display_df.columns = ['순서', '문제번호', '선택등급', '정답등급', '정답여부']
+                display_df['정답여부'] = display_df['정답여부'].map({True: '✅', False: '❌'})
+                st.dataframe(display_df, use_container_width=True)
+        
+        with tab2:
+            if st.session_state.practice2_results:
+                results_df = pd.DataFrame(st.session_state.practice2_results)
+                display_df = results_df[['question', 'question_num', 'content', 'organization', 'expression', 'total', 'correct_total']].copy()
+                display_df.columns = ['순서', '문제번호', '내용점수', '조직점수', '표현점수', '총점', '정답총점']
+                display_df['점수차이'] = display_df['총점'] - display_df['정답총점']
+                st.dataframe(display_df, use_container_width=True)
+    
+    # 액션 버튼들
+    st.markdown("---")
+    col_action1, col_action2, col_action3 = st.columns(3)
+    
+    with col_action1:
+        if st.button("📊 결과 다운로드", use_container_width=True):
+            # CSV 다운로드 기능
+            csv_data = create_results_csv()
+            st.download_button(
+                label="CSV 파일 다운로드",
+                data=csv_data,
+                file_name=f"sep_results_{st.session_state.user_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+    
+    with col_action2:
+        if st.button("🔄 다른 연습 하기", use_container_width=True):
+            st.session_state.stage = 'practice_selection'
+            st.session_state.current_question = 1
+            st.rerun()
+    
+    with col_action3:
+        if st.button("🏠 처음으로", use_container_width=True):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
+
+def create_results_csv():
+    """결과를 CSV 형태로 생성"""
+    data = {
+        'user_name': st.session_state.user_name,
+        'selected_practice': st.session_state.selected_practice,
+        'completion_time': datetime.now().isoformat(),
+        'total_time_minutes': (datetime.now() - st.session_state.start_time).seconds // 60
+    }
+    
+    # 연습1 결과 요약
+    if st.session_state.practice1_results:
+        p1_correct = sum(1 for r in st.session_state.practice1_results if r['is_correct'])
+        data['practice1_accuracy'] = (p1_correct / 15) * 100
+        data['practice1_correct_count'] = p1_correct
+    
+    # 연습2 결과 요약
+    if st.session_state.practice2_results:
+        avg_error = np.mean([abs(r['total'] - r['correct_total']) for r in st.session_state.practice2_results])
+        data['practice2_avg_error'] = avg_error
+        data['practice2_accuracy'] = max(0, 100 - avg_error * 8)
+    
+    df = pd.DataFrame([data])
+    return df.to_csv(index=False, encoding='utf-8-sig')
 
 def main():
     # 세션 상태 초기화
@@ -590,9 +831,46 @@ def main():
     if st.session_state.user_name:
         st.sidebar.success(f"👋 {st.session_state.user_name}님")
         
-        # 현재 문제 번호 표시
+        # 선택한 연습 표시
+        if st.session_state.selected_practice:
+            practice_name = {
+                'practice1': '📚 연습1 (등급 추정)',
+                'practice2': '📊 연습2 (점수 추정)',
+                'both': '🎯 두 연습 모두'
+            }.get(st.session_state.selected_practice, '연습 선택됨')
+            st.sidebar.info(f"선택한 연습: {practice_name}")
+        
+        # 경과 시간
+        elapsed = datetime.now() - st.session_state.start_time
+        st.sidebar.metric("⏱️ 경과 시간", f"{elapsed.seconds // 60}분 {elapsed.seconds % 60}초")
+        
+        # 진행률 표시
         if st.session_state.stage in ['practice1', 'practice2']:
-            st.sidebar.write(f"**현재 문제**: {st.session_state.current_question}/15")
+            progress = (st.session_state.current_question - 1) / 15
+            st.sidebar.progress(progress)
+            stage_name = "연습1" if st.session_state.stage == 'practice1' else "연습2"
+            st.sidebar.write(f"**{stage_name} 진행률**: {st.session_state.current_question}/15")
+            
+            if st.session_state.practice1_results:
+                correct_count = sum(1 for r in st.session_state.practice1_results if r['is_correct'])
+                st.sidebar.metric("연습1 정답률", f"{(correct_count/len(st.session_state.practice1_results)*100):.1f}%")
+    
+    # 도움말
+    with st.sidebar.expander("❓ 사용 가이드"):
+        st.markdown("""
+        **📚 연습1 - 등급 추정**
+        - 학생 글을 읽고 1~5등급 중 선택
+        - 즉시 정답 여부와 피드백 제공
+        
+        **📊 연습2 - 점수 추정**
+        - 내용/조직/표현 영역별 점수 입력
+        - 각 영역별 상세 분석 제공
+        
+        **💡 팁**
+        - 평가 기준을 숙지하고 시작하세요
+        - 천천히 읽고 신중하게 판단하세요
+        - 피드백을 통해 학습하세요
+        """)
     
     # 리셋 버튼
     if st.sidebar.button("🔄 처음부터 다시 시작"):
