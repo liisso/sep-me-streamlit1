@@ -63,44 +63,18 @@ if (
 
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        if not df_score.empty:
-            df_score["총점 (정답)"] = df_score[["내용 점수 (정답)", "조직 점수 (정답)", "표현 점수 (정답)"]].sum(axis=1)
-            df_score["총점 (입력)"] = df_score[["내용 점수 (입력)", "조직 점수 (입력)", "표현 점수 (입력)"]].sum(axis=1)
-            df_score.to_excel(writer, index=False, sheet_name="점수 추정 결과")
-        if not df_grade.empty:
-            df_grade.to_excel(writer, index=False, sheet_name="등급 추정 결과")
-                writer.save()
-
-    # 시간 정보 계산
-    from datetime import timedelta
-
-def format_time(seconds):
-    if isinstance(seconds, (int, float)):
-        return str(timedelta(seconds=int(seconds)))
-    return "-"
-
-grade_time = "-"
-score_time = "-""-"
-    if st.session_state.get("grade_start_time"):
-        grade_time = format_time(time.time() - st.session_state.grade_start_time)
-    if st.session_state.get("score_start_time"):
-        score_time = format_time(time.time() - st.session_state.score_start_time)
-
-    # 시간 정보를 별 시트에 저장
     summary_df = pd.DataFrame({
         "사용자명": [st.session_state.username],
         "등급 추정 소요 시간 (분:초)": [grade_time],
         "점수 추정 소요 시간 (분:초)": [score_time]
     })
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        summary_df.to_excel(writer, index=False, sheet_name="연습 시간 요약")
-        if not df_score.empty:
-            df_score["총점 (정답)"] = df_score[["내용 점수 (정답)", "조직 점수 (정답)", "표현 점수 (정답)"]].sum(axis=1)
-            df_score["총점 (입력)"] = df_score[["내용 점수 (입력)", "조직 점수 (입력)", "표현 점수 (입력)"]].sum(axis=1)
-            df_score.to_excel(writer, index=False, sheet_name="점수 추정 결과")
-        if not df_grade.empty:
-            df_grade.to_excel(writer, index=False, sheet_name="등급 추정 결과")
-        writer.save()
+    summary_df.to_excel(writer, index=False, sheet_name="연습 시간 요약")
+    if not df_score.empty:
+        df_score["총점 (정답)"] = df_score[["내용 점수 (정답)", "조직 점수 (정답)", "표현 점수 (정답)"]].sum(axis=1)
+        df_score["총점 (입력)"] = df_score[["내용 점수 (입력)", "조직 점수 (입력)", "표현 점수 (입력)"]].sum(axis=1)
+        df_score.to_excel(writer, index=False, sheet_name="점수 추정 결과")
+    if not df_grade.empty:
+        df_grade.to_excel(writer, index=False, sheet_name="등급 추정 결과")
 
     st.sidebar.download_button(
         label="📥 연습 결과 다운로드 (Excel)",
