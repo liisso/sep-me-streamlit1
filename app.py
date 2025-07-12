@@ -99,7 +99,7 @@ def show_metacognition_checklist():
 def run_grade_practice():
     st.subheader("✏️ [연습1] 글의 등급 추정하기")
     if 'grade_urls' not in st.session_state:
-        base = "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/grade/"
+        base = "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/grade/*.txt"
         urls = [f"{base}{i}.txt" for i in range(1, 16)]
         random.shuffle(urls)
         st.session_state.grade_urls = urls[:st.session_state.num_questions]
@@ -133,7 +133,7 @@ def run_grade_practice():
 def run_score_practice():
     st.subheader("✏️ [연습2] 글의 점수 추정하기")
     if 'score_urls' not in st.session_state:
-        base = "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/scre/"
+        base = "https://raw.githubusercontent.com/liisso/sep-me-streamlit1/refs/heads/main/data/scre/*.txt"
         urls = [f"{base}{i}.txt" for i in range(1, 16)]
         random.shuffle(urls)
         st.session_state.score_urls = urls[:st.session_state.num_questions]
