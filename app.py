@@ -55,10 +55,9 @@ if st.session_state.page == "intro":
     st.header("1단계: 사용자 정보 입력")
     name = st.text_input("이름을 입력하세요")
     agree = st.checkbox("입력한 이름으로 연습 결과가 저장됨에 동의합니다")
-    if name and agree:
+    if name and agree and st.button("다음 단계로 진행"):
         st.session_state.username = name
         st.session_state.page = "instructions"
-        st.experimental_rerun()
 
 elif st.session_state.page == "instructions":
     st.title("📌 연습 안내 및 과제 확인")
@@ -73,7 +72,6 @@ elif st.session_state.page == "instructions":
             st.image(img_data, caption=label)
     if st.button("다음으로", key="to_practice"):
         st.session_state.page = "practice"
-        st.experimental_rerun()
 
 elif st.session_state.page == "practice":
     st.title(f"✍️ 논설문 평가 연습 - {st.session_state.username}님")
