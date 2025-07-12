@@ -198,6 +198,7 @@ def run_grade_practice():
             st.session_state.grade_index += 1
             st.session_state.submitted = False
             st.experimental_rerun()
+            return
 
 # --- 화면 5: 점수 추정 연습 ---
 def run_score_practice():
@@ -277,6 +278,7 @@ def run_score_practice():
             st.session_state.score_index += 1
             st.session_state.score_submitted = False
             st.experimental_rerun()
+            return
 
 # --- 화면 6: 결과 ---
 def show_summary_result():
