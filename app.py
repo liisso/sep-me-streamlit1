@@ -60,7 +60,7 @@ def main():
         st.session_state.user_name = ""
         st.session_state.agreed = False
         st.session_state.mode = None
-        st.session_state.num_questions = 3
+        st.session_state.num_questions = 15  # 문항 수 15개 고정
 
     steps = {
         0: show_start_screen,
@@ -78,7 +78,6 @@ def main():
 def show_start_screen():
     st.title("📘 학생 글 채점 연습 프로그램 SEP ME 6")
     st.session_state.user_name = st.text_input("이름을 입력하세요")
-    st.session_state.num_questions = st.slider("연습 문항 수 설정", 1, 15, 3)
     st.session_state.agreed = st.checkbox("개인정보 수집 및 이용에 동의합니다.")
 
     if st.button("시작하기"):
@@ -87,6 +86,8 @@ def show_start_screen():
         elif not st.session_state.agreed:
             st.warning("개인정보 동의가 필요합니다.")
         else:
+            # 문항 수 15개 고정
+            st.session_state.num_questions = 15
             st.session_state.step = 1
 
 # --- 화면 1 ---
@@ -137,7 +138,7 @@ def show_metacognition_checklist():
 def run_grade_practice():
     st.subheader("✏️ [연습1] 글의 등급 추정하기")
 
-    if 'grade_urls' not in st.session_state:
+    if 'grade_urls' not in st.session_state or not st.session_state.grade_urls:
         urls = get_grade_file_urls()
         if not urls:
             st.error("grade 폴더 내 파일을 불러올 수 없습니다.")
@@ -206,7 +207,7 @@ def run_grade_practice():
 def run_score_practice():
     st.subheader("✏️ [연습2] 글의 점수 추정하기")
 
-    if 'score_urls' not in st.session_state:
+    if 'score_urls' not in st.session_state or not st.session_state.score_urls:
         urls = get_score_file_urls()
         if not urls:
             st.error("scre 폴더 내 파일을 불러올 수 없습니다.")
@@ -294,8 +295,8 @@ def show_mode_complete():
         st.success("연습이 모두 끝났습니다.")
 
     if st.button("다른 연습 모드 선택하러 가기"):
-        # 초기화해서 재연습 가능하게 하면 좋음
-        st.session_state.step = 2
+        st.session_state.step = 2  # 연습 모드 선택 화면으로 이동
+        # 초기화
         st.session_state.submitted = False
         st.session_state.score_submitted = False
         st.session_state.grade_index = 0
