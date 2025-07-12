@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime
-import random
 
 # 페이지 설정
 st.set_page_config(
@@ -23,88 +22,167 @@ def initialize_session_state():
         st.session_state.start_time = datetime.now()
 
 def load_student_texts():
-    """원래 방식으로 txt 파일에서 학생 글 로드"""
+    """실제 txt 파일 구조에 맞게 데이터 로드"""
     samples = []
     
-    st.write("📁 학생 글 데이터 로딩 중...")
+    st.info("📁 실제 학생 글 파일에서 데이터를 로딩합니다...")
     
     # 연습1용 데이터 (grade 폴더)
     grade_count = 0
+    grade_errors = []
+    
     for i in range(1, 16):
         try:
             file_path = f"data/grade/{i}.txt"
-            if os.path.exists(file_path):
+            
+            # UTF-8 먼저 시도
+            try:
                 with open(file_path, 'r', encoding='utf-8') as f:
-                    text = f.read().strip()
-                    if text:  # 빈 파일이 아닌 경우만
-                        samples.append({
-                            'id': i,
-                            'text': text,
-                            'correct_grade': random.randint(1, 5),  # 실제로는 별도 정답 파일에서
-                            'content_score': random.randint(8, 16),
-                            'organization_score': random.randint(4, 10),
-                            'expression_score': random.randint(4, 10),
-                            'type': 'grade'
-                        })
-                        grade_count += 1
+                    lines = f.readlines()
+            except UnicodeDecodeError:
+                # UTF-8 실패 시 cp949 시도
+                with open(file_path, 'r', encoding='cp949') as f:
+                    lines = f.readlines()
+            
+            if len(lines) >= 6:  # 최소 6줄 이상이어야 함
+                # 정답 정보 추출 (첫 4줄)
+                correct_grade = int(lines[0].strip())
+                content_score = int(lines[1].strip())
+                organization_score = int(lines[2].strip())
+                expression_score = int(lines[3].strip())
+                # lines[4]는 추가 정보 (필요시 사용)
+                
+                # 실제 학생 글 내용 (5번째 줄부터)
+                student_text = ''.join(lines[5:]).strip()
+                
+                if student_text:  # 글 내용이 있는 경우만
+                    samples.append({
+                        'id': i,
+                        'text': student_text,
+                        'correct_grade': correct_grade,
+                        'content_score': content_score,
+                        'organization_score': organization_score,
+                        'expression_score': expression_score,
+                        'type': 'grade'
+                    })
+                    grade_count += 1
+                else:
+                    grade_errors.append(f"{i}.txt: 학생 글 내용이 없습니다.")
+            else:
+                grade_errors.append(f"{i}.txt: 파일 형식이 올바르지 않습니다. (줄 수: {len(lines)})")
+                    
+        except FileNotFoundError:
+            grade_errors.append(f"{i}.txt: 파일을 찾을 수 없습니다.")
+        except ValueError as e:
+            grade_errors.append(f"{i}.txt: 점수 형식 오류 - {e}")
         except Exception as e:
-            st.warning(f"grade/{i}.txt 파일 읽기 오류: {e}")
+            grade_errors.append(f"{i}.txt: 처리 오류 - {e}")
     
     # 연습2용 데이터 (score 폴더)
     score_count = 0
+    score_errors = []
+    
     for i in range(1, 16):
         try:
             file_path = f"data/score/{i}.txt"
-            if os.path.exists(file_path):
+            
+            # UTF-8 먼저 시도
+            try:
                 with open(file_path, 'r', encoding='utf-8') as f:
-                    text = f.read().strip()
-                    if text:  # 빈 파일이 아닌 경우만
-                        samples.append({
-                            'id': i + 15,
-                            'text': text,
-                            'correct_grade': random.randint(1, 5),
-                            'content_score': random.randint(8, 16),
-                            'organization_score': random.randint(4, 10),
-                            'expression_score': random.randint(4, 10),
-                            'type': 'score'
-                        })
-                        score_count += 1
+                    lines = f.readlines()
+            except UnicodeDecodeError:
+                # UTF-8 실패 시 cp949 시도
+                with open(file_path, 'r', encoding='cp949') as f:
+                    lines = f.readlines()
+            
+            if len(lines) >= 6:
+                correct_grade = int(lines[0].strip())
+                content_score = int(lines[1].strip())
+                organization_score = int(lines[2].strip())
+                expression_score = int(lines[3].strip())
+                student_text = ''.join(lines[5:]).strip()
+                
+                if student_text:
+                    samples.append({
+                        'id': i + 15,
+                        'text': student_text,
+                        'correct_grade': correct_grade,
+                        'content_score': content_score,
+                        'organization_score': organization_score,
+                        'expression_score': expression_score,
+                        'type': 'score'
+                    })
+                    score_count += 1
+                else:
+                    score_errors.append(f"{i}.txt: 학생 글 내용이 없습니다.")
+            else:
+                score_errors.append(f"{i}.txt: 파일 형식이 올바르지 않습니다. (줄 수: {len(lines)})")
+                    
+        except FileNotFoundError:
+            score_errors.append(f"{i}.txt: 파일을 찾을 수 없습니다.")
+        except ValueError as e:
+            score_errors.append(f"{i}.txt: 점수 형식 오류 - {e}")
         except Exception as e:
-            st.warning(f"score/{i}.txt 파일 읽기 오류: {e}")
+            score_errors.append(f"{i}.txt: 처리 오류 - {e}")
     
     # 로딩 결과 표시
     if grade_count > 0 or score_count > 0:
-        st.success(f"✅ 학생 글 로딩 완료: 연습1({grade_count}개), 연습2({score_count}개)")
+        st.success(f"✅ 실제 txt 파일 로딩 완료!")
+        st.info(f"📚 연습1: {grade_count}개 파일 로드됨")
+        st.info(f"📊 연습2: {score_count}개 파일 로드됨")
+        
+        # 오류가 있다면 표시
+        if grade_errors:
+            with st.expander("⚠️ grade 폴더 파일 오류"):
+                for error in grade_errors:
+                    st.warning(error)
+        
+        if score_errors:
+            with st.expander("⚠️ score 폴더 파일 오류"):
+                for error in score_errors:
+                    st.warning(error)
+        
         return samples
     else:
-        st.warning("⚠️ txt 파일을 찾을 수 없습니다. 샘플 데이터를 사용합니다.")
-        return generate_sample_data()
+        st.error("❌ 사용 가능한 txt 파일이 없습니다.")
+        st.warning("🔄 샘플 데이터로 대체합니다.")
+        return generate_fallback_data()
 
-def generate_sample_data():
-    """샘플 데이터 생성 (txt 파일이 없을 때)"""
-    sample_texts = [
-        "환경 보호는 우리 모두의 책임입니다. 지구 온난화로 인해 빙하가 녹고 있고, 해수면이 상승하고 있습니다. 우리는 일회용품 사용을 줄이고, 재활용을 실천해야 합니다. 또한 대중교통을 이용하고, 에너지를 절약해야 합니다. 작은 실천이 모여 큰 변화를 만들 수 있습니다. 개인의 노력뿐만 아니라 정부와 기업의 적극적인 참여가 필요합니다.",
-        
-        "독서는 인생을 풍요롭게 만드는 활동입니다. 책을 통해 다양한 지식을 얻을 수 있고, 상상력을 기를 수 있습니다. 또한 독서는 스트레스를 해소하고 집중력을 향상시킵니다. 하루에 조금씩이라도 책을 읽는 습관을 기르는 것이 중요합니다. 디지털 시대에도 종이책의 가치는 여전히 소중합니다.",
-        
-        "스마트폰의 과도한 사용은 여러 문제를 야기합니다. 목과 어깨 통증, 시력 저하, 수면 장애 등이 대표적입니다. 또한 대면 소통 능력이 떨어지고 집중력이 저하됩니다. 스마트폰 사용 시간을 제한하고 규칙적인 휴식을 취해야 합니다.",
-        
-        "교육의 중요성에 대해 논하고자 합니다. 교육은 개인의 성장과 사회 발전의 기초가 됩니다. 올바른 교육을 통해 인격을 형성하고 지식을 습득할 수 있습니다. 또한 교육은 사회적 불평등을 해소하고 민주주의를 발전시키는 역할을 합니다.",
-        
-        "건강한 생활습관의 중요성을 강조하고 싶습니다. 규칙적인 운동과 균형 잡힌 식사는 건강의 기본입니다. 또한 충분한 수면과 스트레스 관리도 중요합니다. 건강한 몸과 마음을 유지하기 위해 꾸준한 노력이 필요합니다."
-    ]
+def generate_fallback_data():
+    """txt 파일 로딩 실패 시 대체 샘플 데이터"""
+    st.info("대체 샘플 데이터를 생성합니다.")
     
     samples = []
-    for i in range(30):
+    sample_texts = [
+        "환경 보호는 우리 모두의 책임입니다. 지구 온난화로 인해 빙하가 녹고 있고, 해수면이 상승하고 있습니다.",
+        "독서는 인생을 풍요롭게 만드는 활동입니다. 책을 통해 다양한 지식을 얻을 수 있습니다.",
+        "스마트폰의 과도한 사용은 여러 문제를 야기합니다. 목과 어깨 통증, 시력 저하 등이 대표적입니다."
+    ]
+    
+    # 연습1용 샘플 데이터
+    for i in range(15):
         text_idx = i % len(sample_texts)
         samples.append({
             'id': i + 1,
-            'text': sample_texts[text_idx],
-            'correct_grade': random.randint(1, 5),
-            'content_score': random.randint(8, 16),
-            'organization_score': random.randint(4, 10),
-            'expression_score': random.randint(4, 10),
-            'type': 'grade' if i < 15 else 'score'
+            'text': sample_texts[text_idx] + f" (샘플 데이터 {i+1}번)",
+            'correct_grade': (i % 5) + 1,
+            'content_score': 10 + (i % 6),
+            'organization_score': 6 + (i % 4),
+            'expression_score': 6 + (i % 4),
+            'type': 'grade'
+        })
+    
+    # 연습2용 샘플 데이터
+    for i in range(15):
+        text_idx = i % len(sample_texts)
+        samples.append({
+            'id': i + 16,
+            'text': sample_texts[text_idx] + f" (샘플 데이터 {i+1}번)",
+            'correct_grade': (i % 5) + 1,
+            'content_score': 10 + (i % 6),
+            'organization_score': 6 + (i % 4),
+            'expression_score': 6 + (i % 4),
+            'type': 'score'
         })
     
     return samples
@@ -215,8 +293,8 @@ def show_practice1():
     
     # 현재 문제 데이터 가져오기
     if 'student_data' in st.session_state and st.session_state.student_data:
-        # 연습1용 데이터만 필터링 (처음 15개 또는 type이 'grade'인 것)
-        grade_data = [item for item in st.session_state.student_data if item.get('type') == 'grade'][:15]
+        # 연습1용 데이터만 필터링
+        grade_data = [item for item in st.session_state.student_data if item.get('type') == 'grade']
         
         if len(grade_data) >= st.session_state.current_question:
             current_data = grade_data[st.session_state.current_question - 1]
@@ -313,8 +391,8 @@ def show_practice2():
     
     # 현재 문제 데이터 가져오기
     if 'student_data' in st.session_state and st.session_state.student_data:
-        # 연습2용 데이터만 필터링 (type이 'score'인 것)
-        score_data = [item for item in st.session_state.student_data if item.get('type') == 'score'][:15]
+        # 연습2용 데이터만 필터링
+        score_data = [item for item in st.session_state.student_data if item.get('type') == 'score']
         
         if len(score_data) >= st.session_state.current_question:
             current_data = score_data[st.session_state.current_question - 1]
