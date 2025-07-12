@@ -253,4 +253,8 @@ def main():
         st.rerun()
     
     # 단계별 페이지 표시
-    if st.session_state:
+if st.session_state:
+    # 세션 상태가 존재할 때 실행할 코드
+    if 'stage' not in st.session_state:
+        st.session_state.stage = 'intro'
+
