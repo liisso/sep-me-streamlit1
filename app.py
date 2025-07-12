@@ -126,7 +126,7 @@ elif st.session_state.page == "practice":
         existing_ids = sorted(int(txt[0].strip()) for txt in texts)
         st.sidebar.write(f"📂 불러온 문항 번호: {existing_ids}")
         if not st.session_state.current_text_score:
-            st.session_state.current_text_score = next((txt for txt in sorted(texts, key=lambda x: int(x[0])) if int(x[0]) == 1), None)
+            st.session_state.current_text_score = next((txt for txt in sorted(texts, key=lambda x: int(x[0].strip())) if int(x[0].strip()) == 1), None)
         sel = st.session_state.current_text_score
         text_id, a_c, a_o, a_e = sel[0], int(sel[2]), int(sel[3]), int(sel[4])
         student_text = "\n".join(sel[5:])
