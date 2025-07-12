@@ -160,10 +160,7 @@ elif st.session_state.page == "practice":
     st.session_state.current_text_grade = None
     st.session_state.submitted = False
     st.session_state.next_trigger = True
-    st.session_state.submitted = False
-    st.session_state.next_trigger = True    st.session_state.next_trigger = True    st.session_state.next_trigger = True    st.session_state.next_trigger = True
-
-    elif mode == "점수 추정 연습":
+elif mode == "점수 추정 연습":
         st.subheader("🧩 [연습2] 내용·조직·표현 점수 추정하기")
         texts = load_texts_from_github("score")
         texts = [txt for txt in texts if txt[0].strip().isdigit() and 1 <= int(txt[0].strip()) <= 15]
@@ -233,5 +230,3 @@ elif st.session_state.page == "practice":
     st.session_state.current_text_score = None
     st.session_state.submitted = False
     st.session_state.next_trigger = True
-    st.session_state.submitted = False
-    st.session_state.next_trigger = True    st.session_state.next_trigger = True    st.session_state.next_trigger = True    st.session_state.next_trigger = True
