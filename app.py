@@ -3,9 +3,9 @@ import requests
 import random
 
 def load_txt_from_url(url):
-    resp = requests.get(url)
-    resp.raise_for_status()
-    return resp.text.splitlines()
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.text.splitlines()
 
 def parse_grade_txt(lines):
     if len(lines) < 6:
@@ -26,31 +26,27 @@ def parse_score_txt(lines):
     return qnum, content, organization, expression, text
 
 def fetch_github_file_list(owner, repo, branch, folder):
-    api_url = f"https://api.github.com/repos/{owner}/{repo}/contents/{folder}?ref={branch}"
-    resp = requests.get(api_url)
-    if resp.status_code != 200:
-        st.error(f"GitHub API 호출 실패: {resp.status_code}")
+    url = f"https://api.github.com/repos/{owner}/{repo}/contents/{folder}?ref={branch}"
+    res = requests.get(url)
+    if res.status_code != 200:
+        st.error(f"GitHub API 호출 실패: {res.status_code}")
         return []
-    files = resp.json()
+    files = res.json()
     return [f["name"] for f in files if f["name"].endswith(".txt")]
 
 def get_grade_file_urls():
-    owner = "liisso"
-    repo = "sep-me-streamlit1"
-    branch = "main"
+    owner, repo, branch = "liisso", "sep-me-streamlit1", "main"
     folder = "data/grade"
-    base = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{folder}/"
+    base_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{folder}/"
     files = fetch_github_file_list(owner, repo, branch, folder)
-    return [base + f for f in files]
+    return [base_url + f for f in files]
 
 def get_score_file_urls():
-    owner = "liisso"
-    repo = "sep-me-streamlit1"
-    branch = "main"
+    owner, repo, branch = "liisso", "sep-me-streamlit1", "main"
     folder = "data/scre"
-    base = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{folder}/"
+    base_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{folder}/"
     files = fetch_github_file_list(owner, repo, branch, folder)
-    return [base + f for f in files]
+    return [base_url + f for f in files]
 
 def reset_states():
     st.session_state.clear()
@@ -60,11 +56,9 @@ def reset_states():
 def main():
     st.set_page_config(page_title="SEP ME 6", layout="wide")
 
-    # step 초기화 방어
     if 'step' not in st.session_state:
         reset_states()
 
-    # 각 단계 함수 매핑
     steps = {
         0: start_screen,
         1: intro_screen,
@@ -78,9 +72,8 @@ def main():
     }
 
     if st.session_state.step not in steps:
-        st.warning("잘못된 단계 값이 감지되어 초기화합니다.")
+        st.warning("잘못된 단계 값. 초기화 합니다.")
         reset_states()
-        st.experimental_rerun()
         return
 
     steps[st.session_state.step]()
@@ -89,7 +82,6 @@ def start_screen():
     st.title("📘 학생 글 채점 연습 프로그램 SEP ME 6")
     name = st.text_input("이름을 입력하세요", value=st.session_state.get('user_name', ''))
     agreed = st.checkbox("개인정보 수집 및 이용에 동의합니다.", value=st.session_state.get('agreed', False))
-
     st.session_state.user_name = name
     st.session_state.agreed = agreed
 
@@ -100,7 +92,6 @@ def start_screen():
             st.warning("개인정보 동의가 필요합니다.")
         else:
             st.session_state.step = 1
-            st.experimental_rerun()
 
 def intro_screen():
     st.subheader("쓰기 과제 및 평가 기준 안내")
@@ -110,25 +101,20 @@ def intro_screen():
         st.image("https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/standard.png")
     with st.expander("📄 예시문 보기"):
         st.image("https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/prompt.jpg")
-
     if st.button("연습 유형 선택으로 이동"):
         st.session_state.step = 2
-        st.experimental_rerun()
 
 def mode_selection_screen():
     st.subheader("연습 유형을 선택하세요")
     mode = st.radio("실시할 연습 모드 선택", ["등급 추정만 하기", "점수 추정만 하기", "두 연습 모두 하기"], index=0)
-
     st.session_state.mode = mode
-
     if st.button("선택 완료"):
         if mode == "등급 추정만 하기":
             st.session_state.step = 3
         elif mode == "점수 추정만 하기":
             st.session_state.step = 5
-        else:  # 두 연습 모두 하기
+        else:
             st.session_state.step = 3
-        st.experimental_rerun()
 
 def metacognition_checklist_screen():
     st.subheader("상위 인지 점검 항목")
@@ -141,14 +127,9 @@ def metacognition_checklist_screen():
         "6. 공정하고 객관적인 평가인가요?",
         "7. 평가 과정을 반성했나요?"
     ]
-    checked = []
-    for i, item in enumerate(items):
-        val = st.checkbox(item, key=f"check_{i}")
-        checked.append(val)
-
-    if all(checked):
+    checks = [st.checkbox(item, key=f"chk{i}") for i, item in enumerate(items)]
+    if all(checks):
         if st.button("등급 추정 연습 시작"):
-            # 초기화 등 필요한 상태
             st.session_state.grade_urls = []
             st.session_state.score_urls = []
             st.session_state.grade_index = 0
@@ -158,7 +139,6 @@ def metacognition_checklist_screen():
             st.session_state.submitted = False
             st.session_state.score_submitted = False
             st.session_state.step = 4
-            st.experimental_rerun()
 
 def grade_practice_screen():
     st.subheader("✏️ [연습1] 글의 등급 추정하기")
@@ -178,13 +158,11 @@ def grade_practice_screen():
     total = st.session_state.num_questions
 
     if idx >= total:
-        # 다음 모드 또는 종료 모드로 이동
         if st.session_state.mode == "두 연습 모두 하기":
             st.session_state.step = 5
         else:
             st.session_state.step = 7
-        st.experimental_rerun()
-        return
+        return  # rerun 없이 여기서 함수 종료 (자동 UI 갱신됨)
 
     lines = load_txt_from_url(st.session_state.grade_urls[idx])
     try:
@@ -195,25 +173,21 @@ def grade_practice_screen():
 
     st.markdown(f"### 문항 {idx + 1} / {total}")
 
-    st.markdown(
-        f"""<div style="
-            background-color: white; 
-            color: black; 
-            font-size: 18px; 
-            white-space: pre-wrap; 
-            padding: 15px; 
-            border-radius: 8px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
-            ">{text}</div>""",
-        unsafe_allow_html=True
-    )
+    st.markdown(f"""<div style="
+        background-color: white;
+        color: black;
+        font-size: 18px;
+        white-space: pre-wrap;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        ">{text}</div>""", unsafe_allow_html=True)
 
     if not st.session_state.submitted:
         user_choice = st.radio("예상 등급을 선택하세요:", ["1", "2", "3", "4", "5"], key=f"grade_{idx}")
         if st.button("제출", key=f"grade_submit_{idx}"):
             st.session_state.user_choice = int(user_choice)
             st.session_state.submitted = True
-            # rerun 없이 UI 변환만
     else:
         if st.session_state.user_choice == answer:
             st.success("정답입니다!")
@@ -228,7 +202,6 @@ def grade_practice_screen():
         if st.button("다음", key=f"grade_next_{idx}"):
             st.session_state.grade_index += 1
             st.session_state.submitted = False
-            st.experimental_rerun()
 
 def score_practice_screen():
     st.subheader("✏️ [연습2] 글의 점수 추정하기")
@@ -249,8 +222,7 @@ def score_practice_screen():
 
     if idx >= total:
         st.session_state.step = 8
-        st.experimental_rerun()
-        return
+        return  # rerun 없이 함수 종료
 
     lines = load_txt_from_url(st.session_state.score_urls[idx])
     try:
@@ -261,18 +233,15 @@ def score_practice_screen():
 
     st.markdown(f"### 문항 {idx + 1} / {total}")
 
-    st.markdown(
-        f"""<div style="
-            background-color: white; 
-            color: black; 
-            font-size: 18px; 
-            white-space: pre-wrap; 
-            padding: 15px; 
-            border-radius: 8px; 
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
-            ">{text}</div>""",
-        unsafe_allow_html=True,
-    )
+    st.markdown(f"""<div style="
+        background-color: white;
+        color: black;
+        font-size: 18px;
+        white-space: pre-wrap;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        ">{text}</div>""", unsafe_allow_html=True)
 
     if not st.session_state.score_submitted:
         uc = st.number_input("내용 점수 (3~18)", 3, 18, key=f"uc_{idx}")
@@ -283,7 +252,6 @@ def score_practice_screen():
             st.session_state.uo = uo
             st.session_state.ue = ue
             st.session_state.score_submitted = True
-            # rerun 없이 UI 변환만
     else:
         is_c = abs(st.session_state.uc - c) <= 1
         is_o = abs(st.session_state.uo - o) <= 1
@@ -306,9 +274,8 @@ def score_practice_screen():
         if st.button("다음", key=f"score_next_{idx}"):
             st.session_state.score_index += 1
             st.session_state.score_submitted = False
-            st.experimental_rerun()
 
-def show_grade_end_screen():
+def grade_end_screen():
     st.subheader("✏️ [연습1] 등급 추정 연습이 끝났습니다.")
     if st.session_state.grade_results:
         st.write("### 결과 요약")
@@ -319,13 +286,11 @@ def show_grade_end_screen():
 
     if st.button("연습 모드 선택하기"):
         st.session_state.step = 2
-        st.experimental_rerun()
 
     if st.button("프로그램 종료하기"):
         reset_states()
-        st.experimental_rerun()
 
-def show_score_end_screen():
+def score_end_screen():
     st.subheader("✏️ [연습2] 점수 추정 연습이 끝났습니다.")
     if st.session_state.score_results:
         st.write("### 결과 요약")
@@ -336,23 +301,19 @@ def show_score_end_screen():
 
     if st.button("연습 모드 선택하기"):
         st.session_state.step = 2
-        st.experimental_rerun()
 
     if st.button("프로그램 종료하기"):
         reset_states()
-        st.experimental_rerun()
 
-def show_summary_result():
+def summary_screen():
     st.title("📊 연습 결과 요약")
-
-    if 'grade_results' in st.session_state and st.session_state.grade_results:
+    if st.session_state.grade_results:
         st.subheader("등급 추정 결과")
         for r in st.session_state.grade_results:
             st.markdown(f"- {r}")
     else:
         st.info("등급 추정 연습 결과가 없습니다.")
-
-    if 'score_results' in st.session_state and st.session_state.score_results:
+    if st.session_state.score_results:
         st.subheader("점수 추정 결과")
         for r in st.session_state.score_results:
             st.markdown(f"- {r}")
@@ -361,14 +322,6 @@ def show_summary_result():
 
     if st.button("다른 연습 모드 선택하러 가기"):
         st.session_state.step = 2
-        st.session_state.submitted = False
-        st.session_state.score_submitted = False
-        st.session_state.grade_index = 0
-        st.session_state.score_index = 0
-        st.session_state.grade_urls = []
-        st.session_state.score_urls = []
-        st.session_state.grade_results = []
-        st.session_state.score_results = []
 
 if __name__ == "__main__":
     main()
