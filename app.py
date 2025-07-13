@@ -49,7 +49,10 @@ def get_score_file_urls():
     return [base_url + f for f in files]
 
 def reset_states():
-    # 개별 변수만 초기화해서 상태 문제 방지
+    # 세션 상태 완전 초기화
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    # 초기 상태값 세팅
     st.session_state.step = 0
     st.session_state.num_questions = 15
     st.session_state.user_name = ""
@@ -67,7 +70,6 @@ def reset_states():
 def main():
     st.set_page_config(page_title="SEP ME 6", layout="wide")
 
-    # step 키 없거나 이상하면 초기화
     if 'step' not in st.session_state or not isinstance(st.session_state.step, int):
         reset_states()
 
