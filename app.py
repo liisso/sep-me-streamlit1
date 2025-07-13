@@ -93,6 +93,7 @@ def start_screen():
         else:
             st.session_state.step = 1
             st.experimental_rerun()
+            return
 
 def intro_screen():
     st.subheader("쓰기 과제 및 평가 기준 안내")
@@ -105,6 +106,7 @@ def intro_screen():
     if st.button("연습 유형 선택으로 이동"):
         st.session_state.step = 2
         st.experimental_rerun()
+        return
 
 def mode_selection_screen():
     st.subheader("연습 유형을 선택하세요")
@@ -118,6 +120,7 @@ def mode_selection_screen():
         else:
             st.session_state.step = 3
         st.experimental_rerun()
+        return
 
 def metacognition_checklist_screen():
     st.subheader("상위 인지 점검 항목")
@@ -143,6 +146,7 @@ def metacognition_checklist_screen():
             st.session_state.score_submitted = False
             st.session_state.step = 4
             st.experimental_rerun()
+            return
 
 def grade_practice_screen():
     st.subheader("✏️ [연습1] 글의 등급 추정하기")
@@ -207,6 +211,7 @@ def grade_practice_screen():
             st.session_state.grade_index += 1
             st.session_state.submitted = False
             st.experimental_rerun()
+            return
 
 def score_practice_screen():
     st.subheader("✏️ [연습2] 글의 점수 추정하기")
@@ -280,6 +285,7 @@ def score_practice_screen():
             st.session_state.score_index += 1
             st.session_state.score_submitted = False
             st.experimental_rerun()
+            return
 
 def grade_end_screen():
     st.subheader("✏️ [연습1] 등급 추정 연습이 끝났습니다.")
@@ -293,10 +299,12 @@ def grade_end_screen():
     if st.button("연습 모드 선택하기"):
         st.session_state.step = 2
         st.experimental_rerun()
+        return
 
     if st.button("프로그램 종료하기"):
         reset_states()
         st.experimental_rerun()
+        return
 
 def score_end_screen():
     st.subheader("✏️ [연습2] 점수 추정 연습이 끝났습니다.")
@@ -310,10 +318,12 @@ def score_end_screen():
     if st.button("연습 모드 선택하기"):
         st.session_state.step = 2
         st.experimental_rerun()
+        return
 
     if st.button("프로그램 종료하기"):
         reset_states()
         st.experimental_rerun()
+        return
 
 def summary_screen():
     st.title("📊 연습 결과 요약")
@@ -333,6 +343,7 @@ def summary_screen():
     if st.button("다른 연습 모드 선택하러 가기"):
         st.session_state.step = 2
         st.experimental_rerun()
+        return
 
 if __name__ == "__main__":
     main()
