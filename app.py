@@ -92,6 +92,7 @@ def start_screen():
             st.warning("개인정보 동의가 필요합니다.")
         else:
             st.session_state.step = 1
+            st.experimental_rerun()
 
 def intro_screen():
     st.subheader("쓰기 과제 및 평가 기준 안내")
@@ -103,6 +104,7 @@ def intro_screen():
         st.image("https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/prompt.jpg")
     if st.button("연습 유형 선택으로 이동"):
         st.session_state.step = 2
+        st.experimental_rerun()
 
 def mode_selection_screen():
     st.subheader("연습 유형을 선택하세요")
@@ -115,6 +117,7 @@ def mode_selection_screen():
             st.session_state.step = 5
         else:
             st.session_state.step = 3
+        st.experimental_rerun()
 
 def metacognition_checklist_screen():
     st.subheader("상위 인지 점검 항목")
@@ -139,6 +142,7 @@ def metacognition_checklist_screen():
             st.session_state.submitted = False
             st.session_state.score_submitted = False
             st.session_state.step = 4
+            st.experimental_rerun()
 
 def grade_practice_screen():
     st.subheader("✏️ [연습1] 글의 등급 추정하기")
@@ -159,10 +163,11 @@ def grade_practice_screen():
 
     if idx >= total:
         if st.session_state.mode == "두 연습 모두 하기":
-            st.session_state.step = 5
+            st.session_state.step = 5  # 점수 연습 시작
         else:
-            st.session_state.step = 7
-        return  # rerun 없이 여기서 함수 종료 (자동 UI 갱신됨)
+            st.session_state.step = 7  # 등급 연습 종료 화면
+        st.experimental_rerun()
+        return
 
     lines = load_txt_from_url(st.session_state.grade_urls[idx])
     try:
@@ -172,7 +177,6 @@ def grade_practice_screen():
         return
 
     st.markdown(f"### 문항 {idx + 1} / {total}")
-
     st.markdown(f"""<div style="
         background-color: white;
         color: black;
@@ -202,6 +206,7 @@ def grade_practice_screen():
         if st.button("다음", key=f"grade_next_{idx}"):
             st.session_state.grade_index += 1
             st.session_state.submitted = False
+            st.experimental_rerun()
 
 def score_practice_screen():
     st.subheader("✏️ [연습2] 글의 점수 추정하기")
@@ -222,7 +227,8 @@ def score_practice_screen():
 
     if idx >= total:
         st.session_state.step = 8
-        return  # rerun 없이 함수 종료
+        st.experimental_rerun()
+        return
 
     lines = load_txt_from_url(st.session_state.score_urls[idx])
     try:
@@ -232,7 +238,6 @@ def score_practice_screen():
         return
 
     st.markdown(f"### 문항 {idx + 1} / {total}")
-
     st.markdown(f"""<div style="
         background-color: white;
         color: black;
@@ -274,6 +279,7 @@ def score_practice_screen():
         if st.button("다음", key=f"score_next_{idx}"):
             st.session_state.score_index += 1
             st.session_state.score_submitted = False
+            st.experimental_rerun()
 
 def grade_end_screen():
     st.subheader("✏️ [연습1] 등급 추정 연습이 끝났습니다.")
@@ -286,9 +292,11 @@ def grade_end_screen():
 
     if st.button("연습 모드 선택하기"):
         st.session_state.step = 2
+        st.experimental_rerun()
 
     if st.button("프로그램 종료하기"):
         reset_states()
+        st.experimental_rerun()
 
 def score_end_screen():
     st.subheader("✏️ [연습2] 점수 추정 연습이 끝났습니다.")
@@ -301,9 +309,11 @@ def score_end_screen():
 
     if st.button("연습 모드 선택하기"):
         st.session_state.step = 2
+        st.experimental_rerun()
 
     if st.button("프로그램 종료하기"):
         reset_states()
+        st.experimental_rerun()
 
 def summary_screen():
     st.title("📊 연습 결과 요약")
@@ -322,6 +332,7 @@ def summary_screen():
 
     if st.button("다른 연습 모드 선택하러 가기"):
         st.session_state.step = 2
+        st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
