@@ -96,7 +96,7 @@ def guide_screen():
         st.markdown("#### 📝 쓰기 과제")
         try:
             st.image("https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/assignment.png", 
-                    caption="쓰기 과제 안내", use_column_width=True)
+                    caption="쓰기 과제 안내", use_container_width=True)
         except:
             st.error("과제 안내 이미지를 불러올 수 없습니다.")
     
@@ -104,7 +104,7 @@ def guide_screen():
         st.markdown("#### 📊 평가 기준")
         try:
             st.image("https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/standard.png", 
-                    caption="평가 기준 안내", use_column_width=True)
+                    caption="평가 기준 안내", use_container_width=True)
         except:
             st.error("평가 기준 이미지를 불러올 수 없습니다.")
     
@@ -112,7 +112,7 @@ def guide_screen():
         st.markdown("#### 📚 등급별 예시 글")
         try:
             st.image("https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/prompt.jpg", 
-                    caption="등급별 예시 글", use_column_width=True)
+                    caption="등급별 예시 글", use_container_width=True)
         except:
             st.error("예시 글 이미지를 불러올 수 없습니다.")
     
