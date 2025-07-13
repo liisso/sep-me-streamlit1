@@ -49,10 +49,8 @@ def get_score_file_urls():
     return [base_url + f for f in files]
 
 def reset_states():
-    # 세션 상태 완전 초기화
     for key in list(st.session_state.keys()):
         del st.session_state[key]
-    # 초기 상태값 세팅
     st.session_state.step = 0
     st.session_state.num_questions = 15
     st.session_state.user_name = ""
@@ -88,6 +86,7 @@ def main():
     if st.session_state.step not in steps:
         st.warning("잘못된 단계 값. 초기화 합니다.")
         reset_states()
+        st.experimental_rerun()
         return
 
     steps[st.session_state.step]()
@@ -181,9 +180,9 @@ def grade_practice_screen():
 
     if idx >= total:
         if st.session_state.mode == "두 연습 모두 하기":
-            st.session_state.step = 5  # 점수 연습 시작
+            st.session_state.step = 5
         else:
-            st.session_state.step = 7  # 등급 연습 종료 화면
+            st.session_state.step = 7
         st.experimental_rerun()
         return
 
