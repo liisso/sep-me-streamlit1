@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import random
 
-# GitHub에서 텍스트 파일 리스트 가져오기
 def fetch_github_file_list(owner, repo, branch, folder):
     url = f"https://api.github.com/repos/{owner}/{repo}/contents/{folder}?ref={branch}"
     res = requests.get(url)
@@ -12,13 +11,11 @@ def fetch_github_file_list(owner, repo, branch, folder):
     files = res.json()
     return [f["name"] for f in files if f["name"].endswith(".txt")]
 
-# 텍스트 파일 내용 불러오기 및 분할
 def load_txt_from_url(url):
     response = requests.get(url)
     response.raise_for_status()
     return response.text.splitlines()
 
-# 등급 추정 텍스트 파싱 (1행 문항번호, 2행 정답, 6행부터 글)
 def parse_grade_txt(lines):
     if len(lines) < 6:
         raise ValueError("파일 형식 오류: 6행 이상 필요")
@@ -27,7 +24,6 @@ def parse_grade_txt(lines):
     text = "\n".join(lines[5:]).strip()
     return qnum, answer, text
 
-# GitHub raw 파일 URL 리스트 생성
 def get_grade_file_urls():
     owner, repo, branch = "liisso", "sep-me-streamlit1", "main"
     folder = "data/grade"
@@ -39,11 +35,14 @@ def reset_state():
     st.session_state.clear()
     st.session_state.step = 0
     st.session_state.num_questions = 15
+    st.session_state.grade_urls = []
+    st.session_state.grade_index = 0
+    st.session_state.grade_results = []
+    st.session_state.submitted = False
 
 def main():
-    st.set_page_config(page_title="SEP ME 6 - 등급 추정 연습", layout="wide")
+    st.set_page_config(page_title="SEP ME 6 - 등급 추정 모드", layout="wide")
 
-    # 초기 상태 세팅
     if 'step' not in st.session_state:
         reset_state()
 
@@ -57,10 +56,10 @@ def main():
         st.error("알 수 없는 상태입니다. 초기화합니다.")
         reset_state()
         st.experimental_rerun()
+        return
 
 def start_screen():
     st.title("📘 학생 글 채점 연습 프로그램 SEP ME 6 (등급 추정 모드)")
-
     name = st.text_input("이름을 입력하세요", value=st.session_state.get('user_name', ''))
     agreed = st.checkbox("개인정보 수집 및 이용에 동의합니다.", value=st.session_state.get('agreed', False))
 
@@ -73,7 +72,6 @@ def start_screen():
         elif not agreed:
             st.warning("개인정보 수집 및 이용에 동의해주세요.")
         else:
-            # 파일 URL 리스트 받아와서 저장
             urls = get_grade_file_urls()
             if not urls:
                 st.error("grade 폴더 내 파일을 불러올 수 없습니다.")
@@ -85,17 +83,16 @@ def start_screen():
             st.session_state.submitted = False
             st.session_state.step = 1
             st.experimental_rerun()
-            return
+            return  # 중요!
 
 def practice_screen():
     idx = st.session_state.grade_index
     total = st.session_state.num_questions
 
-    # 문항 끝났으면 결과 화면으로 이동
     if idx >= total:
         st.session_state.step = 2
         st.experimental_rerun()
-        return
+        return  # 중요!
 
     url = st.session_state.grade_urls[idx]
     try:
@@ -121,6 +118,8 @@ def practice_screen():
         if st.button("제출", key=f"submit_{idx}"):
             st.session_state.user_choice = int(choice)
             st.session_state.submitted = True
+            st.experimental_rerun()
+            return  # 중요!
     else:
         if st.session_state.user_choice == answer:
             st.success("정답입니다!")
@@ -136,7 +135,7 @@ def practice_screen():
             st.session_state.grade_index += 1
             st.session_state.submitted = False
             st.experimental_rerun()
-            return
+            return  # 중요!
 
 def result_screen():
     st.subheader("✏️ 등급 추정 연습이 끝났습니다.")
@@ -150,7 +149,8 @@ def result_screen():
     if st.button("다시 시작하기"):
         reset_state()
         st.experimental_rerun()
-        return
+        return  # 중요!
 
 if __name__ == "__main__":
     main()
+
