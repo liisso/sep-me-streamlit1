@@ -140,11 +140,32 @@ def run_grade_practice():
     idx = st.session_state.grade_index
     total = st.session_state.num_questions
     if idx >= total:
-        if st.session_state.mode == "both":
-            st.session_state.step = 5
+        st.subheader("✏️ [연습1] 등급 추정 연습이 끝났습니다.")
+        st.write("### 결과 요약")
+        if st.session_state.grade_results:
+            for r in st.session_state.grade_results:
+                st.markdown(f"- {r}")
         else:
-            st.session_state.step = 6
-        st.session_state.submitted = False
+            st.info("결과가 없습니다.")
+
+        if st.button("연습 모드 선택하기"):
+            st.session_state.step = 2
+
+        if st.button("프로그램 종료하기"):
+            # 상태 초기화
+            st.session_state.step = 0
+            st.session_state.user_name = ""
+            st.session_state.agreed = False
+            st.session_state.mode = None
+            st.session_state.grade_index = 0
+            st.session_state.score_index = 0
+            st.session_state.grade_urls = []
+            st.session_state.score_urls = []
+            st.session_state.grade_results = []
+            st.session_state.score_results = []
+            st.session_state.submitted = False
+            st.session_state.score_submitted = False
+            st.experimental_rerun()
         return
 
     lines = load_txt_from_url(st.session_state.grade_urls[idx])
@@ -192,7 +213,7 @@ def run_grade_practice():
         if st.button("다음", key=f"grade_next_{idx}"):
             st.session_state.grade_index += 1
             st.session_state.submitted = False
-            return  # rerun 제거, return만
+            st.experimental_rerun()
 
 def run_score_practice():
     st.subheader("✏️ [연습2] 글의 점수 추정하기")
@@ -211,8 +232,32 @@ def run_score_practice():
     idx = st.session_state.score_index
     total = st.session_state.num_questions
     if idx >= total:
-        st.session_state.step = 6
-        st.session_state.score_submitted = False
+        st.subheader("✏️ [연습2] 점수 추정 연습이 끝났습니다.")
+        st.write("### 결과 요약")
+        if st.session_state.score_results:
+            for r in st.session_state.score_results:
+                st.markdown(f"- {r}")
+        else:
+            st.info("결과가 없습니다.")
+
+        if st.button("연습 모드 선택하기"):
+            st.session_state.step = 2
+
+        if st.button("프로그램 종료하기"):
+            # 상태 초기화
+            st.session_state.step = 0
+            st.session_state.user_name = ""
+            st.session_state.agreed = False
+            st.session_state.mode = None
+            st.session_state.grade_index = 0
+            st.session_state.score_index = 0
+            st.session_state.grade_urls = []
+            st.session_state.score_urls = []
+            st.session_state.grade_results = []
+            st.session_state.score_results = []
+            st.session_state.submitted = False
+            st.session_state.score_submitted = False
+            st.experimental_rerun()
         return
 
     lines = load_txt_from_url(st.session_state.score_urls[idx])
@@ -272,7 +317,7 @@ def run_score_practice():
         if st.button("다음", key=f"score_next_{idx}"):
             st.session_state.score_index += 1
             st.session_state.score_submitted = False
-            return  # rerun 제거, return만
+            st.experimental_rerun()
 
 def show_summary_result():
     st.title("📊 연습 결과 요약")
