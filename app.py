@@ -78,7 +78,13 @@ def main():
         8: show_score_end_screen,
     }
 
-    steps[st.session_state.step]()
+    # 방어 코드: step 값 검사
+    if st.session_state.step in steps:
+        steps[st.session_state.step]()
+    else:
+        st.warning("잘못된 단계 값입니다. 처음으로 돌아갑니다.")
+        st.session_state.step = 0
+        st.experimental_rerun()
 
 def show_start_screen():
     st.title("📘 학생 글 채점 연습 프로그램 SEP ME 6")
@@ -188,7 +194,7 @@ def run_grade_practice():
         if st.button("제출", key=f"grade_submit_{idx}"):
             st.session_state.user_choice = int(user_choice)
             st.session_state.submitted = True
-            # 제출 후는 바로 rerun 하지 않음
+            # 여기서는 rerun 호출하지 않음
     else:
         if st.session_state.user_choice == answer:
             st.success("정답입니다!")
@@ -262,7 +268,7 @@ def run_score_practice():
             st.session_state.uo = uo
             st.session_state.ue = ue
             st.session_state.score_submitted = True
-            # 제출 후 바로 rerun 하지 않음
+            # 여기서는 rerun 호출하지 않음
     else:
         is_c = abs(st.session_state.uc - c) <= 1
         is_o = abs(st.session_state.uo - o) <= 1
