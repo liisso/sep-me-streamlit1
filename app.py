@@ -2,15 +2,6 @@ import streamlit as st
 import requests
 import random
 
-def fetch_github_file_list(owner, repo, branch, folder):
-    url = f"https://api.github.com/repos/{owner}/{repo}/contents/{folder}?ref={branch}"
-    res = requests.get(url)
-    if res.status_code != 200:
-        st.error(f"GitHub API 호출 실패: {res.status_code}")
-        return []
-    files = res.json()
-    return [f["name"] for f in files if f["name"].endswith(".txt")]
-
 def load_txt_from_url(url):
     response = requests.get(url)
     response.raise_for_status()
@@ -23,6 +14,15 @@ def parse_grade_txt(lines):
     answer = int(lines[1].strip())
     text = "\n".join(lines[5:]).strip()
     return qnum, answer, text
+
+def fetch_github_file_list(owner, repo, branch, folder):
+    url = f"https://api.github.com/repos/{owner}/{repo}/contents/{folder}?ref={branch}"
+    res = requests.get(url)
+    if res.status_code != 200:
+        st.error(f"GitHub API 호출 실패: {res.status_code}")
+        return []
+    files = res.json()
+    return [f["name"] for f in files if f["name"].endswith(".txt")]
 
 def get_grade_file_urls():
     owner, repo, branch = "liisso", "sep-me-streamlit1", "main"
@@ -39,60 +39,49 @@ def reset_state():
     st.session_state.grade_index = 0
     st.session_state.grade_results = []
     st.session_state.submitted = False
-
-def main():
-    st.set_page_config(page_title="SEP ME 6 - 등급 추정 모드", layout="wide")
-
-    if 'step' not in st.session_state:
-        reset_state()
-
-    if st.session_state.step == 0:
-        start_screen()
-    elif st.session_state.step == 1:
-        practice_screen()
-    elif st.session_state.step == 2:
-        result_screen()
-    else:
-        st.error("알 수 없는 상태입니다. 초기화합니다.")
-        reset_state()
-        st.experimental_rerun()
-        return
+    st.session_state.user_choice = None
+    st.session_state.user_name = ""
+    st.session_state.agreed = False
 
 def start_screen():
     st.title("📘 학생 글 채점 연습 프로그램 SEP ME 6 (등급 추정 모드)")
     name = st.text_input("이름을 입력하세요", value=st.session_state.get('user_name', ''))
     agreed = st.checkbox("개인정보 수집 및 이용에 동의합니다.", value=st.session_state.get('agreed', False))
-
     st.session_state.user_name = name
     st.session_state.agreed = agreed
 
     if st.button("시작하기"):
         if not name.strip():
-            st.warning("이름을 입력하세요.")
+            st.warning("이름을 입력해야 시작할 수 있습니다.")
         elif not agreed:
-            st.warning("개인정보 수집 및 이용에 동의해주세요.")
+            st.warning("개인정보 동의가 필요합니다.")
         else:
-            urls = get_grade_file_urls()
-            if not urls:
-                st.error("grade 폴더 내 파일을 불러올 수 없습니다.")
-                return
-            random.shuffle(urls)
-            st.session_state.grade_urls = urls[:st.session_state.num_questions]
-            st.session_state.grade_index = 0
-            st.session_state.grade_results = []
-            st.session_state.submitted = False
             st.session_state.step = 1
             st.experimental_rerun()
-            return  # 중요!
+            return
 
 def practice_screen():
+    st.subheader("✏️ [연습1] 글의 등급 추정하기")
+
+    if not st.session_state.grade_urls:
+        urls = get_grade_file_urls()
+        if not urls:
+            st.error("grade 폴더 내 파일을 불러올 수 없습니다.")
+            return
+        random.shuffle(urls)
+        st.session_state.grade_urls = urls[:st.session_state.num_questions]
+        st.session_state.grade_index = 0
+        st.session_state.grade_results = []
+        st.session_state.submitted = False
+        st.session_state.user_choice = None
+
     idx = st.session_state.grade_index
     total = st.session_state.num_questions
 
     if idx >= total:
         st.session_state.step = 2
         st.experimental_rerun()
-        return  # 중요!
+        return
 
     url = st.session_state.grade_urls[idx]
     try:
@@ -119,7 +108,7 @@ def practice_screen():
             st.session_state.user_choice = int(choice)
             st.session_state.submitted = True
             st.experimental_rerun()
-            return  # 중요!
+            return
     else:
         if st.session_state.user_choice == answer:
             st.success("정답입니다!")
@@ -134,23 +123,47 @@ def practice_screen():
         if st.button("다음", key=f"next_{idx}"):
             st.session_state.grade_index += 1
             st.session_state.submitted = False
+            st.session_state.user_choice = None
             st.experimental_rerun()
-            return  # 중요!
+            return
 
 def result_screen():
-    st.subheader("✏️ 등급 추정 연습이 끝났습니다.")
+    st.title("📊 등급 추정 연습 결과 요약")
+
     if st.session_state.grade_results:
-        st.write("### 결과 요약")
         for r in st.session_state.grade_results:
             st.markdown(f"- {r}")
     else:
         st.info("결과가 없습니다.")
 
-    if st.button("다시 시작하기"):
+    if st.button("프로그램 종료하기"):
         reset_state()
         st.experimental_rerun()
-        return  # 중요!
+        return
+    if st.button("다시 연습하기"):
+        st.session_state.step = 1
+        st.experimental_rerun()
+        return
+
+def main():
+    st.set_page_config(page_title="SEP ME 6 - 등급 추정 모드", layout="wide")
+
+    if 'step' not in st.session_state:
+        reset_state()
+
+    steps = {
+        0: start_screen,
+        1: practice_screen,
+        2: result_screen,
+    }
+
+    if st.session_state.step not in steps:
+        st.warning("잘못된 단계 값입니다. 초기화합니다.")
+        reset_state()
+        st.experimental_rerun()
+        return
+
+    steps[st.session_state.step]()
 
 if __name__ == "__main__":
     main()
-
