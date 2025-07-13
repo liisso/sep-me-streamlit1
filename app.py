@@ -1,3 +1,5 @@
+import streamlit as st
+st.write("Streamlit version:", st.__version__)
 # app.py
 import streamlit as st
 import requests
