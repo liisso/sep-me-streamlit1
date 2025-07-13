@@ -1,5 +1,3 @@
-import streamlit as st
-st.write("Streamlit version:", st.__version__)
 # app.py
 import streamlit as st
 import requests
@@ -47,15 +45,26 @@ def get_score_file_urls():
     txt_files = fetch_github_file_list(owner, repo, branch, folder)
     return [base_raw_url + filename for filename in txt_files]
 
+def reset_all_states():
+    st.session_state.step = 0
+    st.session_state.user_name = ""
+    st.session_state.agreed = False
+    st.session_state.mode = None
+    st.session_state.num_questions = 15
+    st.session_state.grade_index = 0
+    st.session_state.score_index = 0
+    st.session_state.grade_urls = []
+    st.session_state.score_urls = []
+    st.session_state.grade_results = []
+    st.session_state.score_results = []
+    st.session_state.submitted = False
+    st.session_state.score_submitted = False
+
 def main():
     st.set_page_config(page_title="SEP ME 6", layout="wide")
 
     if 'step' not in st.session_state:
-        st.session_state.step = 0
-        st.session_state.user_name = ""
-        st.session_state.agreed = False
-        st.session_state.mode = None
-        st.session_state.num_questions = 15
+        reset_all_states()
 
     steps = {
         0: show_start_screen,
@@ -69,7 +78,6 @@ def main():
         8: show_score_end_screen,
     }
 
-    st.write(f"DEBUG - 현재 step: {st.session_state.step}")
     steps[st.session_state.step]()
 
 def show_start_screen():
@@ -143,8 +151,9 @@ def run_grade_practice():
 
     idx = st.session_state.grade_index
     total = st.session_state.num_questions
+
     if idx >= total:
-        st.session_state.step = 7  # 등급 연습 종료 화면
+        st.session_state.step = 7
         st.experimental_rerun()
         return
 
@@ -177,8 +186,9 @@ def run_grade_practice():
     if not st.session_state.submitted:
         user_choice = st.radio("예상 등급을 선택하세요:", ["1", "2", "3", "4", "5"], key=f"grade_{idx}")
         if st.button("제출", key=f"grade_submit_{idx}"):
-            st.session_state.submitted = True
             st.session_state.user_choice = int(user_choice)
+            st.session_state.submitted = True
+            st.experimental_rerun()
     else:
         if st.session_state.user_choice == answer:
             st.success("정답입니다!")
@@ -211,8 +221,9 @@ def run_score_practice():
 
     idx = st.session_state.score_index
     total = st.session_state.num_questions
+
     if idx >= total:
-        st.session_state.step = 8  # 점수 연습 종료 화면
+        st.session_state.step = 8
         st.experimental_rerun()
         return
 
@@ -247,10 +258,11 @@ def run_score_practice():
         uo = st.number_input("조직 점수 (2~12)", 2, 12, key=f"uo_{idx}")
         ue = st.number_input("표현 점수 (2~12)", 2, 12, key=f"ue_{idx}")
         if st.button("제출", key=f"score_submit_{idx}"):
-            st.session_state.score_submitted = True
             st.session_state.uc = uc
             st.session_state.uo = uo
             st.session_state.ue = ue
+            st.session_state.score_submitted = True
+            st.experimental_rerun()
     else:
         is_c = abs(st.session_state.uc - c) <= 1
         is_o = abs(st.session_state.uo - o) <= 1
@@ -336,21 +348,6 @@ def show_summary_result():
         st.session_state.score_urls = []
         st.session_state.grade_results = []
         st.session_state.score_results = []
-
-def reset_all_states():
-    st.session_state.step = 0
-    st.session_state.user_name = ""
-    st.session_state.agreed = False
-    st.session_state.mode = None
-    st.session_state.num_questions = 15
-    st.session_state.grade_index = 0
-    st.session_state.score_index = 0
-    st.session_state.grade_urls = []
-    st.session_state.score_urls = []
-    st.session_state.grade_results = []
-    st.session_state.score_results = []
-    st.session_state.submitted = False
-    st.session_state.score_submitted = False
 
 if __name__ == "__main__":
     main()
