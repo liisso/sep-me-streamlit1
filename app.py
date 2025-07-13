@@ -32,7 +32,7 @@ def get_grade_file_urls():
     return [base_url + f for f in files]
 
 def reset_state():
-    st.session_state.clear()
+    # 세션 상태를 완전히 비우지 않고, 필요한 기본값을 반드시 할당
     st.session_state.step = 0
     st.session_state.num_questions = 15
     st.session_state.grade_urls = []
@@ -141,15 +141,24 @@ def result_screen():
         st.experimental_rerun()
         return
     if st.button("다시 연습하기"):
+        # 연습 재시작 시 상태 일부만 초기화
         st.session_state.step = 1
+        st.session_state.grade_urls = []
+        st.session_state.grade_index = 0
+        st.session_state.grade_results = []
+        st.session_state.submitted = False
+        st.session_state.user_choice = None
         st.experimental_rerun()
         return
 
 def main():
     st.set_page_config(page_title="SEP ME 6 - 등급 추정 모드", layout="wide")
 
+    # 세션 상태의 필수 키가 없으면 반드시 초기화
     if 'step' not in st.session_state:
         reset_state()
+        # return을 반드시 넣어서 이 프레임에서 코드가 더 실행되지 않도록 함
+        return
 
     steps = {
         0: start_screen,
@@ -160,7 +169,6 @@ def main():
     if st.session_state.step not in steps:
         st.warning("잘못된 단계 값입니다. 초기화합니다.")
         reset_state()
-        st.experimental_rerun()
         return
 
     steps[st.session_state.step]()
