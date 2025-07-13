@@ -49,14 +49,26 @@ def get_score_file_urls():
     return [base_url + f for f in files]
 
 def reset_states():
-    st.session_state.clear()
+    # 개별 변수만 초기화해서 상태 문제 방지
     st.session_state.step = 0
     st.session_state.num_questions = 15
+    st.session_state.user_name = ""
+    st.session_state.agreed = False
+    st.session_state.mode = None
+    st.session_state.grade_urls = []
+    st.session_state.score_urls = []
+    st.session_state.grade_index = 0
+    st.session_state.score_index = 0
+    st.session_state.grade_results = []
+    st.session_state.score_results = []
+    st.session_state.submitted = False
+    st.session_state.score_submitted = False
 
 def main():
     st.set_page_config(page_title="SEP ME 6", layout="wide")
 
-    if 'step' not in st.session_state:
+    # step 키 없거나 이상하면 초기화
+    if 'step' not in st.session_state or not isinstance(st.session_state.step, int):
         reset_states()
 
     steps = {
