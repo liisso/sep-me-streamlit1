@@ -31,8 +31,29 @@ def get_grade_file_urls():
     files = fetch_github_file_list(owner, repo, branch, folder)
     return [base_url + f for f in files]
 
+def initialize_session_state():
+    """세션 상태 초기화 함수"""
+    if 'step' not in st.session_state:
+        st.session_state.step = 0
+    if 'num_questions' not in st.session_state:
+        st.session_state.num_questions = 15
+    if 'grade_urls' not in st.session_state:
+        st.session_state.grade_urls = []
+    if 'grade_index' not in st.session_state:
+        st.session_state.grade_index = 0
+    if 'grade_results' not in st.session_state:
+        st.session_state.grade_results = []
+    if 'submitted' not in st.session_state:
+        st.session_state.submitted = False
+    if 'user_choice' not in st.session_state:
+        st.session_state.user_choice = None
+    if 'user_name' not in st.session_state:
+        st.session_state.user_name = ""
+    if 'agreed' not in st.session_state:
+        st.session_state.agreed = False
+
 def reset_state():
-    # 세션 상태를 완전히 비우지 않고, 필요한 기본값을 반드시 할당
+    """앱 재시작을 위한 상태 초기화"""
     st.session_state.step = 0
     st.session_state.num_questions = 15
     st.session_state.grade_urls = []
@@ -45,8 +66,11 @@ def reset_state():
 
 def start_screen():
     st.title("📘 학생 글 채점 연습 프로그램 SEP ME 6 (등급 추정 모드)")
-    name = st.text_input("이름을 입력하세요", value=st.session_state.get('user_name', ''))
-    agreed = st.checkbox("개인정보 수집 및 이용에 동의합니다.", value=st.session_state.get('agreed', False))
+    
+    name = st.text_input("이름을 입력하세요", value=st.session_state.user_name)
+    agreed = st.checkbox("개인정보 수집 및 이용에 동의합니다.", value=st.session_state.agreed)
+    
+    # 입력값을 세션 상태에 저장
     st.session_state.user_name = name
     st.session_state.agreed = agreed
 
@@ -57,12 +81,12 @@ def start_screen():
             st.warning("개인정보 동의가 필요합니다.")
         else:
             st.session_state.step = 1
-            st.experimental_rerun()
-            return
+            st.rerun()
 
 def practice_screen():
     st.subheader("✏️ [연습1] 글의 등급 추정하기")
 
+    # 문제 URL 초기화
     if not st.session_state.grade_urls:
         urls = get_grade_file_urls()
         if not urls:
@@ -78,11 +102,12 @@ def practice_screen():
     idx = st.session_state.grade_index
     total = st.session_state.num_questions
 
+    # 모든 문제를 완료했으면 결과 화면으로
     if idx >= total:
         st.session_state.step = 2
-        st.experimental_rerun()
-        return
+        st.rerun()
 
+    # 현재 문제 로드
     url = st.session_state.grade_urls[idx]
     try:
         lines = load_txt_from_url(url)
@@ -102,30 +127,36 @@ def practice_screen():
         box-shadow: 0 0 5px rgba(0,0,0,0.1);
         ">{text}</div>""", unsafe_allow_html=True)
 
+    # 답안 제출 전
     if not st.session_state.submitted:
         choice = st.radio("예상 등급을 선택하세요:", ["1", "2", "3", "4", "5"], key=f"grade_{idx}")
         if st.button("제출", key=f"submit_{idx}"):
             st.session_state.user_choice = int(choice)
             st.session_state.submitted = True
-            st.experimental_rerun()
-            return
+            st.rerun()
+    
+    # 답안 제출 후
     else:
         if st.session_state.user_choice == answer:
             st.success("정답입니다!")
-            if f"{qnum}번 문항: 정답" not in st.session_state.grade_results:
-                st.session_state.grade_results.append(f"{qnum}번 문항: 정답")
+            result_text = f"{qnum}번 문항: 정답"
         else:
             st.error("오답입니다. 아래 피드백을 참고하세요.")
-            st.image(f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_grade/{qnum}.png")
-            if f"{qnum}번 문항: 오답" not in st.session_state.grade_results:
-                st.session_state.grade_results.append(f"{qnum}번 문항: 오답")
+            try:
+                st.image(f"https://raw.githubusercontent.com/liisso/sep-me-streamlit1/main/data/f_grade/{qnum}.png")
+            except:
+                st.warning("피드백 이미지를 불러올 수 없습니다.")
+            result_text = f"{qnum}번 문항: 오답"
+        
+        # 결과 저장 (중복 방지)
+        if result_text not in st.session_state.grade_results:
+            st.session_state.grade_results.append(result_text)
 
         if st.button("다음", key=f"next_{idx}"):
             st.session_state.grade_index += 1
             st.session_state.submitted = False
             st.session_state.user_choice = None
-            st.experimental_rerun()
-            return
+            st.rerun()
 
 def result_screen():
     st.title("📊 등급 추정 연습 결과 요약")
@@ -136,41 +167,44 @@ def result_screen():
     else:
         st.info("결과가 없습니다.")
 
-    if st.button("프로그램 종료하기"):
-        reset_state()
-        st.experimental_rerun()
-        return
-    if st.button("다시 연습하기"):
-        # 연습 재시작 시 상태 일부만 초기화
-        st.session_state.step = 1
-        st.session_state.grade_urls = []
-        st.session_state.grade_index = 0
-        st.session_state.grade_results = []
-        st.session_state.submitted = False
-        st.session_state.user_choice = None
-        st.experimental_rerun()
-        return
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("프로그램 종료하기"):
+            reset_state()
+            st.rerun()
+    
+    with col2:
+        if st.button("다시 연습하기"):
+            # 연습 관련 상태만 초기화
+            st.session_state.step = 1
+            st.session_state.grade_urls = []
+            st.session_state.grade_index = 0
+            st.session_state.grade_results = []
+            st.session_state.submitted = False
+            st.session_state.user_choice = None
+            st.rerun()
 
 def main():
     st.set_page_config(page_title="SEP ME 6 - 등급 추정 모드", layout="wide")
 
-    # 세션 상태의 필수 키가 없으면 반드시 초기화
-    if 'step' not in st.session_state:
-        reset_state()
-        # return을 반드시 넣어서 이 프레임에서 코드가 더 실행되지 않도록 함
-        return
+    # 세션 상태 초기화
+    initialize_session_state()
 
+    # 단계별 화면 매핑
     steps = {
         0: start_screen,
         1: practice_screen,
         2: result_screen,
     }
 
+    # 유효하지 않은 단계값 처리
     if st.session_state.step not in steps:
         st.warning("잘못된 단계 값입니다. 초기화합니다.")
         reset_state()
-        return
+        st.rerun()
 
+    # 현재 단계의 화면 실행
     steps[st.session_state.step]()
 
 if __name__ == "__main__":
